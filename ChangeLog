@@ -1,3 +1,7 @@
+2013-01-29  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* NEWS: Add missing bug ID.
+
 2013-04-17  Andrew John Hughes  <gnu.andrew@member.fsf.org>
 
 	* patches/openjdk/6669869-Beans_isDesignTime_should_be_per-AppContext.patch:
