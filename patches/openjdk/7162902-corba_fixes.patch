@@ -2057,13 +2057,6 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/M
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
 --- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java	2012-09-21 19:59:15.000000000 +0100
 +++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java	2012-10-30 14:13:12.264547523 +0000
-@@ -1,5 +1,5 @@
- /*
-- * Copyright (c) 2002, 2004, Oracle and/or its affiliates. All rights reserved.
-+ * Copyright (c) 2002, 2012, Oracle and/or its affiliates. All rights reserved.
-  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-  *
-  * This code is free software; you can redistribute it and/or modify it
 @@ -171,7 +171,7 @@
  
      private static Map staticWrapperMap = new ConcurrentHashMap();
@@ -2071,10 +2064,10 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
 -    private MonitoringManager monitoringManager;
 +    protected MonitoringManager monitoringManager;
  
-     // There is only one instance of the PresentationManager
-     // that is shared between all ORBs.  This is necessary
+     private static PresentationManager setupPresentationManager() {
+         staticWrapper = ORBUtilSystemException.get(
 @@ -226,6 +226,14 @@
-         globalPM.setStubFactoryFactory( true, dynamicStubFactoryFactory ) ;
+         return pm;
      }
  
 +    public void destroy() {
@@ -2085,9 +2078,9 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
 +        byteBufferPool = null;
 +    }
 +
-     /** Get the single instance of the PresentationManager
-      */
-     public static PresentationManager getPresentationManager()
+     /**
+      * Returns the Presentation Manager for the current thread group, using the ThreadGroup-specific
+      * AppContext to hold it. Creates and records one if needed.
 @@ -302,6 +310,9 @@
      // Typecode support: needed in both ORBImpl and ORBSingleton
      public TypeCodeImpl get_primitive_tc(int kind)

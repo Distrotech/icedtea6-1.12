@@ -1383,15 +1383,7 @@ diff -Nru openjdk.orig/jdk/src/share/classes/javax/swing/RepaintManager.java ope
   * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
   *
   * This code is free software; you can redistribute it and/or modify it
-@@ -34,6 +34,7 @@
- import java.util.*;
- import java.applet.*;
- 
-+import sun.awt.AWTAccessor;
- import sun.awt.AppContext;
- import sun.awt.DisplayChangedListener;
- import sun.awt.SunToolkit;
-@@ -681,6 +682,44 @@
+@@ -711,6 +711,44 @@
          }
      }
  
@@ -1437,16 +1429,16 @@ diff -Nru openjdk.orig/jdk/src/share/classes/javax/swing/RepaintManager.java ope
       * Paint all of the components that have been marked dirty.
       *
 @@ -714,6 +753,10 @@
-         int localBoundsW = 0;
-         Enumeration keys;
+             return;
+         }
  
 +        // the components belonging to perpixel-translucent windows will be
 +        // removed from the list
-+        tmpDirtyComponents = updateWindows(tmpDirtyComponents);
++        updateWindows(tmpDirtyComponents);
 +
-         roots = new ArrayList<Component>(count);
+         final java.util.List<Component> roots =
+             new ArrayList<Component>(tmpDirtyComponents.size());
  
-         for (Component dirty : tmpDirtyComponents.keySet()) {
 diff -Nru openjdk.orig/jdk/src/share/classes/sun/awt/AWTAccessor.java openjdk/jdk/src/share/classes/sun/awt/AWTAccessor.java
 --- openjdk.orig/jdk/src/share/classes/sun/awt/AWTAccessor.java	2012-09-19 14:17:58.172424355 +0100
 +++ openjdk/jdk/src/share/classes/sun/awt/AWTAccessor.java	2012-09-19 14:21:45.168060548 +0100
@@ -2765,7 +2757,7 @@ diff -Nru openjdk.orig/jdk/src/windows/classes/sun/awt/windows/WComponentPeer.ja
                  bim.setRGB(0, 0, totalW, h, pix, 0, totalW);
                  g.drawImage(bim, 0, startY, null);
                  bim.flush();
-@@ -902,25 +903,6 @@
+@@ -903,25 +904,6 @@
      public void setBoundsOperation(int operation) {
      }
  
@@ -2791,7 +2783,7 @@ diff -Nru openjdk.orig/jdk/src/windows/classes/sun/awt/windows/WComponentPeer.ja
      /**
       * Returns whether this component is capable of being hw accelerated.
       * More specifically, whether rendering to this component or a
-@@ -935,28 +917,36 @@
+@@ -936,28 +918,36 @@
       * @see com.sun.awt.AWTUtilities.Translucency#TRANSLUCENT
       */
      public boolean isAccelCapable() {
