@@ -1,4 +1,10 @@
 2013-02-04  Andrew John Hughes  <gnu.andrew@redhat.com>
+            Omair Majid  <omajid@redhat.com>
+
+	* NEWS: Add release date.
+	* configure.ac: Bump to 1.12.1.
+
+2013-02-04  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* NEWS: Add security fixes.
 
