@@ -1,3 +1,8 @@
+2013-02-04  Omair Majid  <omajid@redhat.com>
+
+	* NEWS: Fix release date of 1.12.1. Add new section.
+	* configure.ac: Prepare for 1.12.2
+
 2013-02-04  Andrew John Hughes  <gnu.andrew@redhat.com>
             Omair Majid  <omajid@redhat.com>
 

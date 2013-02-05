@@ -10,7 +10,9 @@ LPX - https://bugs.launchpad.net/bugs/X
 
 CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
-New in release 1.12.1 (2012-02-04):
+New in release 1.12.2 (2013-XX-YY):
+
+New in release 1.12.1 (2013-02-04):
 
 * Security fixes
   - S6563318, CVE-2013-0424: RMI data sanitization
@@ -45,6 +47,8 @@ New in release 1.12.1 (2012-02-04):
   - S8001307: Modify ACC_SUPER behavior
   - S8001972, CVE-2013-1478: Improve image processing
   - S8002325, CVE-2013-1480: Improve management of images
+* Backports
+  - S7010849: 5/5 Extraneous javac source/target options when building sa-jdi
 
 New in release 1.12.0 (2013-01-29):
 
