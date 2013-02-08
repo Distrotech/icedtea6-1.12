@@ -1,3 +1,15 @@
+2013-02-08  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* Makefile.am:
+	(ICEDTEA_PATCHES): Add additional patches to
+	fix regressions introduced by security fixes
+	6664509 & 7201064.
+	* patches/openjdk/8004341-jck_dialog_failure.patch:
+	Fix issue with Dialog serialization.
+	* patches/openjdk/8005615-failure_to_load_logger_implementation.patch:
+	Fix issue with use of custom LogManagers.
+	* NEWS: Updated.
+
 2013-02-04  Omair Majid  <omajid@redhat.com>
 
 	* NEWS: Fix release date of 1.12.1. Add new section.

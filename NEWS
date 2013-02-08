@@ -12,6 +12,10 @@ CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
 New in release 1.12.2 (2013-XX-YY):
 
+* Backports
+  - S8004341: Two JCK tests fails with 7u11 b06
+  - S8005615: Java Logger fails to load tomcat logger implementation (JULI)
+
 New in release 1.12.1 (2013-02-04):
 
 * Security fixes
