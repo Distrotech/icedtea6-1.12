@@ -17,6 +17,7 @@ New in release 1.12.2 (2013-XX-YY):
   - S8005615: Java Logger fails to load tomcat logger implementation (JULI)
 * Bug fixes
   - PR1297: cacao and jamvm parallel unpack failures
+  - PR1301: PR1171 causes builds of Zero to fail
 
 New in release 1.12.1 (2013-02-04):
 
