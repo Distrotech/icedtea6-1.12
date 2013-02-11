@@ -1,3 +1,11 @@
+2013-02-11  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* Makefile.am:
+	(ICEDTEA_PATCHES): Add additional patch to
+	make 8004341 fix match upstream version.
+	* patches/openjdk/8004341-jck_dialog_failure-02.patch:
+	Fix issue with Dialog serialization.
+
 2013-02-08  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	PR1301: PR1171 causes Zero builds to fail
