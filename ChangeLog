@@ -1,5 +1,10 @@
 2013-02-11  Andrew John Hughes  <gnu.andrew@redhat.com>
 
+	* NEWS: Add release date of 1.12.2.
+	* configure.ac: Prepare for 1.12.2.
+
+2013-02-11  Andrew John Hughes  <gnu.andrew@redhat.com>
+
 	* Makefile.am:
 	(ICEDTEA_PATCHES): Add additional patch to
 	make 8004341 fix match upstream version.

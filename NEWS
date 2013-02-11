@@ -10,7 +10,7 @@ LPX - https://bugs.launchpad.net/bugs/X
 
 CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
-New in release 1.12.2 (2013-XX-YY):
+New in release 1.12.2 (2013-02-11):
 
 * Backports
   - S8004341: Two JCK tests fails with 7u11 b06
