@@ -1,3 +1,8 @@
+2013-02-13  Andrew John Hughes  <gnu.andrew@member.fsf.org>
+
+	* configure.ac: Bump to 1.12.3pre.
+	* NEWS: Add section for 1.12.3.
+
 2013-02-11  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* NEWS: Add release date of 1.12.2.
