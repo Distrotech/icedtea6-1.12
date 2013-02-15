@@ -1,5 +1,9 @@
 2013-02-15  Andrew John Hughes  <gnu.andrew@redhat.com>
 
+	* configure.ac: Set version to 1.12.3.
+
+2013-02-15  Andrew John Hughes  <gnu.andrew@redhat.com>
+
 	* Makefile.am:
 	(SECURITY_PATCHES): Add latest security patches.
 	* NEWS: List security fixes & set release date.
