@@ -10,8 +10,12 @@ LPX - https://bugs.launchpad.net/bugs/X
 
 CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
-New in release 1.12.3 (2013-02-XX):
+New in release 1.12.3 (2013-02-19):
 
+* Security fixes
+  - S8006446: Restrict MBeanServer access
+  - S8006777: Improve TLS handling of invalid messages
+  - S8007688: Blacklist known bad certificate
 * Bug fixes
   - PR1319: Support GIF lib v5.
 
