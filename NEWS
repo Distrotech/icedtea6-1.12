@@ -16,6 +16,9 @@ New in release 1.12.3 (2013-02-19):
   - S8006446: Restrict MBeanServer access
   - S8006777: Improve TLS handling of invalid messages
   - S8007688: Blacklist known bad certificate
+* Backports
+  - S8007393: Possible race condition after JDK-6664509
+  - S8007611: logging behavior in applet changed
 * Bug fixes
   - PR1319: Support GIF lib v5.
 
