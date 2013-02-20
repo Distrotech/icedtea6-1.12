@@ -1,3 +1,7 @@
+2013-02-20  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* NEWS: Add CVE numbers.
+
 2013-02-17  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* Makefile.am:
