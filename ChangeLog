@@ -1,3 +1,11 @@
+2013-03-04  Omair Majid  <omajid@redhat.com>
+
+	* NEWS: List new security patches.
+	* Makefile.am (ICEDTEA_PATCHES): Add new patches.
+	* patches/security/20130304/8007014.patch,
+	* patches/security/20130304/8007675.patch:
+	New patches for the next security update.
+
 2013-02-20  Andrew John Hughes  <gnu.andrew@member.fsf.org>
 
 	* configure.ac: Bump to 1.12.4pre.
