@@ -1,5 +1,10 @@
 2013-03-04  Omair Majid  <omajid@redhat.com>
 
+	* confiugre.ac: Prepare for 1.12.4.
+	* NEWS: Add release date fo 1.12.4.
+
+2013-03-04  Omair Majid  <omajid@redhat.com>
+
 	* NEWS: List new security patches.
 	* Makefile.am (ICEDTEA_PATCHES): Add new patches.
 	* patches/security/20130304/8007014.patch,
