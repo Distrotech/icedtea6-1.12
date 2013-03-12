@@ -1,3 +1,8 @@
+2013-03-12  Andrew John Hughes  <gnu.andrew@member.fsf.org>
+
+	* configure.ac: Bump to 1.12.5pre.
+	* NEWS: Add section for 1.12.5.
+
 2013-03-04  Omair Majid  <omajid@redhat.com>
 
 	* confiugre.ac: Prepare for 1.12.4.
