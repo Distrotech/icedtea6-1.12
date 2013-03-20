@@ -511,7 +511,9 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/8004341-jck_dialog_failure-02.patch \
 	patches/pr1319-support_giflib_5.patch \
 	patches/openjdk/8007393.patch \
-	patches/openjdk/8007611.patch
+	patches/openjdk/8007611.patch \
+	patches/fix_get_stack_bounds_leak.patch \
+	patches/openjdk/7197906-handle_32_bit_shifts.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \

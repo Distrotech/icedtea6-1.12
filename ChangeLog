@@ -1,3 +1,15 @@
+2013-03-19  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* Makefile.am:
+	(ICEDTEA_PATCHES): Add new patches.
+	* patches/openjdk/7197906-handle_32_bit_shifts.patch:
+	Backport from OpenJDK 7.
+	* patches/fix_get_stack_bounds_leak.patch:
+	Add a much simpler fix for 7017193 using
+	free which doesn't suffer from the performance issues in
+	https://bugzilla.redhat.com/show_bug.cgi?id=902004
+	* NEWS: Updated.
+
 2013-03-12  Andrew John Hughes  <gnu.andrew@member.fsf.org>
 
 	* configure.ac: Bump to 1.12.5pre.

@@ -12,6 +12,11 @@ CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
 New in release 1.12.5 (2013-04-XX):
 
+* Backports
+  - S7197906: BlockOffsetArray::power_to_cards_back() needs to handle > 32 bit shifts
+* Bug fixes
+  - Fix get_stack_bounds memory leak (alternate fix for S7197906)
+
 New in release 1.12.4 (2013-03-04):
 
 * Security fixes
