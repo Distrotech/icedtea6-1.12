@@ -279,7 +279,9 @@ SECURITY_PATCHES = \
 	patches/security/20130219/8006777.patch \
 	patches/security/20130219/8007688.patch \
 	patches/security/20130304/8007014.patch \
-	patches/security/20130304/8007675.patch
+	patches/security/20130304/8007675.patch \
+	patches/security/20130416/7036559.patch \
+        patches/security/20130416/8009063.patch
 
 SPECIAL_SECURITY_PATCH = patches/security/20120214/7112642.patch
 
