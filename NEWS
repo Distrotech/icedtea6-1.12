@@ -58,6 +58,8 @@ New in release 1.12.5 (2013-04-XX):
 * Bug fixes
   - Fix get_stack_bounds memory leak (alternate fix for S7197906)
   - PR1362: Fedora 19 / rawhide FTBFS SIGILL
+  - PR1338: Remove dependence on libXp
+  - PR1339: Simplify the rhino class rewriter to avoid use of concurrency
 
 New in release 1.12.4 (2013-03-04):
 
