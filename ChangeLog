@@ -1,5 +1,11 @@
 2013-04-17  Andrew John Hughes  <gnu.andrew@redhat.com>
 
+	* NEWS: Improve listing for S8004987 and
+	S8004994, using descriptions buried in the
+	patch itself (found during release announcement).
+
+2013-04-17  Andrew John Hughes  <gnu.andrew@redhat.com>
+
 	* NEWS: List additional fix for PR1319 and
 	bug ID (OJ3) for get_stack_bounds memory leak.
 

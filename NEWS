@@ -29,8 +29,8 @@ New in release 1.12.5 (2013-04-XX):
   - S8004261: Improve input validation
   - S8004336, CVE-2013-2431: Better handling of method handle intrinsic frames
   - S8004986, CVE-2013-2383: Better handling of glyph table
-  - S8004987, CVE-2013-2384: Better handling of glyph table
-  - S8004994, CVE-2013-1569: Better handling of glyph table
+  - S8004987, CVE-2013-2384: Improve font layout
+  - S8004994, CVE-2013-1569: Improve checking of glyph table
   - S8005432: Update access to JAX-WS
   - S8005943: (process) Improved Runtime.exec
   - S8006309: More reliable control panel operation
