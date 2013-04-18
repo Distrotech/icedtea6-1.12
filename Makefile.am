@@ -570,7 +570,8 @@ ICEDTEA_PATCHES = \
 	patches/fix_get_stack_bounds_leak.patch \
 	patches/openjdk/7197906-handle_32_bit_shifts.patch \
 	patches/aarch64.patch \
-	patches/jaxws-tempfiles-ioutils-6.patch
+	patches/jaxws-tempfiles-ioutils-6.patch \
+	patches/object-factory-cl-internal.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \
