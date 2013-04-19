@@ -66,6 +66,7 @@ New in release 1.12.5 (2013-04-XX):
   - PR1319: Correct #ifdef to #if
   - PR1402: Support glibc < 2.17 with AArch64 patch
   - Give xalan/xerces access to their own internal packages.
+  - Fix backport from S6657673.
 
 New in release 1.12.4 (2013-03-04):
 
