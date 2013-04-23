@@ -12,8 +12,11 @@ CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
 New in release 1.12.5 (2013-04-XX):
 
+* Security fixes
+  - S8009063, CVE-2013-2426: Improve reliability of ConcurrentHashMap
 * Backports
   - S7197906: BlockOffsetArray::power_to_cards_back() needs to handle > 32 bit shifts
+  - S7036559: ConcurrentHashMap footprint and contention improvements
 * Bug fixes
   - Fix get_stack_bounds memory leak (alternate fix for S7197906)
 
