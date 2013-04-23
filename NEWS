@@ -14,6 +14,7 @@ New in release 1.12.5 (2013-04-XX):
 
 * New features
   - JAXP, JAXWS & JAF supplied as patches rather than drops to aid subsequent patching.
+  - PR1380: Add AArch64 support to Zero
 * Security fixes
   - S6657673, CVE-2013-1518: Issues with JAXP
   - S7200507: Refactor Introspector internals

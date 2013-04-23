@@ -548,6 +548,9 @@ ICEDTEA_PATCHES = \
 	patches/fix_get_stack_bounds_leak.patch \
 	patches/openjdk/7197906-handle_32_bit_shifts.patch
 
+# Needs to be after the addition of SH support to the original HotSpot
+ICEDTEA_PATCHES += patches/aarch64.patch
+
 if WITH_RHINO
 ICEDTEA_PATCHES += \
 	patches/rhino.patch
