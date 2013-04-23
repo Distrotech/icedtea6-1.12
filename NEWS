@@ -57,6 +57,7 @@ New in release 1.12.5 (2013-04-XX):
   - S8004302: javax/xml/soap/Test7013971.java fails since jdk6u39b01
 * Bug fixes
   - Fix get_stack_bounds memory leak (alternate fix for S7197906)
+  - PR1362: Fedora 19 / rawhide FTBFS SIGILL
 
 New in release 1.12.4 (2013-03-04):
 
