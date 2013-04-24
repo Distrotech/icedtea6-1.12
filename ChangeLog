@@ -1,5 +1,10 @@
 2013-04-24  Andrew John Hughes  <gnu.andrew@redhat.com>
 
+	* configure.ac: Set version to 1.12.5.
+	* NEWS: Set release date for 1.12.5.
+
+2013-04-24  Andrew John Hughes  <gnu.andrew@redhat.com>
+
 	* Makefile.am:
 	(ICEDTEA_PATCHES): Add new patch.
 	* NEWS: Mention 8009530 backport.
