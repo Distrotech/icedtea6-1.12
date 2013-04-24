@@ -57,6 +57,7 @@ New in release 1.12.5 (2013-04-XX):
   - S7017324: Kerning crash in JDK 7 since ICU layout update
   - S7064279: Introspector.getBeanInfo() should release some resources in timely manner
   - S8004302: javax/xml/soap/Test7013971.java fails since jdk6u39b01
+  - S7133220: Additional patches to JAXP 1.4.5 update 1 for 7u4 (partial for S6657673)
 * Bug fixes
   - OJ3: Fix get_stack_bounds memory leak (alternate fix for S7197906)
   - PR1362: Fedora 19 / rawhide FTBFS SIGILL
@@ -66,7 +67,6 @@ New in release 1.12.5 (2013-04-XX):
   - PR1319: Correct #ifdef to #if
   - PR1402: Support glibc < 2.17 with AArch64 patch
   - Give xalan/xerces access to their own internal packages.
-  - Fix backport from S6657673.
 
 New in release 1.12.4 (2013-03-04):
 
