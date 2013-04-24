@@ -46,6 +46,7 @@ New in release 1.12.5 (2013-04-XX):
   - S8009699, CVE-2013-2421: Methodhandle lookup
   - S8009814, CVE-2013-1488: Better driver management
   - S8009857, CVE-2013-2422: Problem with plugin
+  - RH952389: Temporary files created with insecure permissions
 * Backports
   - S7197906: BlockOffsetArray::power_to_cards_back() needs to handle > 32 bit shifts
   - S7036559: ConcurrentHashMap footprint and contention improvements
