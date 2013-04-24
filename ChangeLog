@@ -1,6 +1,14 @@
 2013-04-24  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* Makefile.am:
+	(ICEDTEA_PATCHES): Add new patch.
+	* NEWS: Mention 8009530 backport.
+	* patches/openjdk/8009530-icu_kern_table_support_broken.patch:
+	Backported from 7u.
+
+2013-04-24  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* Makefile.am:
 	(ICEDTEA_PATCHES): Rename patches.
 	* NEWS: List backports in previous change
 	correctly.

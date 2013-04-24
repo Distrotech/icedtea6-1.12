@@ -573,7 +573,8 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/7197906-handle_32_bit_shifts.patch \
 	patches/aarch64.patch \
 	patches/jaxws-tempfiles-ioutils-6.patch \
-	patches/object-factory-cl-internal.patch
+	patches/object-factory-cl-internal.patch \
+	patches/openjdk/8009530-icu_kern_table_support_broken.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \
