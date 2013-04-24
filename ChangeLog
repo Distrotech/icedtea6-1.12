@@ -1,5 +1,18 @@
 2013-04-17  Andrew John Hughes  <gnu.andrew@redhat.com>
 
+	* patches/aarch64.patch:
+	Fix to apply against older HotSpot.
+
+2013-04-17  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	PR1402: Support glibc < 2.17 with AArch64 patch
+	* NEWS: Updated.
+	* patches/aarch64.patch:
+	Define EM_AARCH64 for legacy systems
+	with glibc earlier than 2.17.
+
+2013-04-17  Andrew John Hughes  <gnu.andrew@redhat.com>
+
 	* NEWS: Improve listing for S8004987 and
 	S8004994, using descriptions buried in the
 	patch itself (found during release announcement).

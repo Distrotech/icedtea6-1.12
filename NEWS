@@ -45,7 +45,7 @@ New in release 1.12.5 (2013-04-XX):
   - S8009305, CVE-2013-0401: Improve AWT data transfer
   - S8009699, CVE-2013-2421: Methodhandle lookup
   - S8009814, CVE-2013-1488: Better driver management
-  - S8009857. CVE-2013-2422: Problem with plugin
+  - S8009857, CVE-2013-2422: Problem with plugin
 * Backports
   - S7197906: BlockOffsetArray::power_to_cards_back() needs to handle > 32 bit shifts
   - S7036559: ConcurrentHashMap footprint and contention improvements
@@ -63,6 +63,7 @@ New in release 1.12.5 (2013-04-XX):
   - PR1339: Simplify the rhino class rewriter to avoid use of concurrency
   - PR1336: Bootstrap failure on Fedora 17/18
   - PR1319: Correct #ifdef to #if
+  - PR1402: Support glibc < 2.17 with AArch64 patch
 
 New in release 1.12.4 (2013-03-04):
 
