@@ -7,8 +7,11 @@ DX  - http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=X
 GX  - http://bugs.gentoo.org/show_bug.cgi?id=X
 CAX - http://server.complang.tuwien.ac.at/cgi-bin/bugzilla/show_bug.cgi?id=X
 LPX - https://bugs.launchpad.net/bugs/X 
+OJX - http://java.net/jira/browse/OPENJDK6-X
 
 CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
+
+New in release 1.12.6 (2013-06-XX):
 
 New in release 1.12.5 (2013-04-24):
 
