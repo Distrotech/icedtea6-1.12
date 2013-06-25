@@ -453,7 +453,6 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/6693253-security_warning.patch \
 	patches/openjdk/6444769-windowwithwarningtest.patch \
 	patches/openjdk/6656651-windows_lcd_glyphs.patch \
-	$(SPECIAL_SECURITY_PATCH_2) \
 	patches/notice-safepoints.patch \
 	patches/parisc-opt.patch \
 	patches/lucene-crash.patch \
@@ -466,6 +465,7 @@ ICEDTEA_PATCHES = \
 	patches/gcc-suffix.patch \
 	patches/memory-limits.patch \
 	patches/libraries.patch \
+	$(SPECIAL_SECURITY_PATCH_2) \
 	patches/jvmtiEnv.patch \
 	patches/lcms.patch \
 	patches/print_lsb_release.patch \

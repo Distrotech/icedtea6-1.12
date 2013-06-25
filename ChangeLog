@@ -1,4 +1,17 @@
-2013-06-22  Andrew John Hughes  <gnu.andrew@member.fsf.org>
+2013-06-24  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* Makefile.am:
+	(ICEDTEA_PATCHES): Move 8009071 after library patch.
+	* NEWS: Correct bug ID referenced for OJ3.
+	* patches/ecj/needs-6.patch:
+	Add cases for javax.sound and javax.management, due
+	to @Override annotations in the security patches.
+	* patches/openjdk/6307603-xrender-01.patch:
+	Regenerated again as wrong last time.
+	* patches/security/20130618/8009071-improve_shape_handling.patch:
+	Include sizecalc.h in gif_lib.h.
+
+2013-06-22  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* patches/idresolver_fix.patch:
 	Removed.  Part of 6469266.
@@ -12,7 +25,8 @@
 	Move 8005615, 8007393 & 8007611 to SECURITY_PATCHES
 	as must be applied before 8004584.  Add 7171223 to
 	end.
-	* patches/openjdk/6307603-xrender-01.patch,
+	* patches/openjdk/6307603-xrender-01.patch:
+	Regenerated.
 	* patches/openjdk/6469266-xmlsec_1.4.2.patch,
 	* patches/openjdk/6656651-windows_lcd_glyphs.patch,
 	* patches/openjdk/6786028-wcag_bold_tags.patch,
@@ -105,7 +119,7 @@
 	2013/06/18 security patches.
 	* patches/apache-xml-internal-fix-bug-38655.patch: Remove.
 
-2013-04-25  Andrew John Hughes  <gnu.andrew@member.fsf.org>
+2013-04-25  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* configure.ac: Bump to 1.12.6pre.
 	* NEWS: Add section for 1.12.6.

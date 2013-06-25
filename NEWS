@@ -63,7 +63,7 @@ New in release 1.12.5 (2013-04-24):
   - S7133220: Additional patches to JAXP 1.4.5 update 1 for 7u4 (partial for S6657673)
   - S8009530: ICU Kern table support broken
 * Bug fixes
-  - OJ3: Fix get_stack_bounds memory leak (alternate fix for S7197906)
+  - OJ3: Fix get_stack_bounds memory leak (alternate fix for S7017193)
   - PR1362: Fedora 19 / rawhide FTBFS SIGILL
   - PR1338: Remove dependence on libXp
   - PR1339: Simplify the rhino class rewriter to avoid use of concurrency
