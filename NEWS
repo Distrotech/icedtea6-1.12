@@ -15,27 +15,55 @@ New in release 1.12.6 (2013-06-XX):
 
 * Security fixes
 * Backports
+  - S6541350: TimeZone display names localization
+  - S6821191: Timezone display name localization
+  - S6977550: (tz) Support tzdata2010l
+  - S6996686: (tz) Support tzdata2010o
+  - S7017800: (tz) Support tzdata2011b
+  - S7027387: (tz) Support tzdata2011d
+  - S7033174: (tz) Support tzdata2011e
+  - S7039469: (tz) Support tzdata2011g
+  - S7090843: (tz) Support tzdata2011j
+  - S7103108: (tz) Support tzdata2011l
+  - S7103405: Correct display names for Pacific/Apia timezone
+  - S7104126: Insert openjdk copyright header back into TZdata files
+  - S7158483: (tz) Support tzdata2012c
+  - S7198570: (tz) Support tzdata2012f
   - S7188114: (launcher) need an alternate command line parser for Windows
+  - S7195301: XML Signature DOM implementation should not use instanceof to determine type of Node
   - S7199143: RFE: OCSP revocation checker should provide possibility to specify connection timeout
+  - S8002070: Remove the stack search for a resource bundle for Logger to use
+  - S8002225: (tz) Support tzdata2012i
   - S8006120: Provide "Server JRE" for 7u train
   - S8006536: [launcher]  removes trailing slashes on arguments
   - S8009165: Fix for 8006435 needs revision
   - S8009217: REGRESSION: test com/sun/org/apache/xml/internal/security/transforms/ClassLoaderTest.java fails to compile since 7u21b03
   - S8009463: Regression test test\java\lang\Runtime\exec\ArgWithSpaceAndFinalBackslash.java failing.
   - S8009610: Blacklist certificate used with malware.
+  - S8009987: (tz) Support tzdata2013b
+  - S8009996: tests javax/management/mxbean/MiscTest.java and javax/management/mxbean/StandardMBeanOverrideTest.java fail
+  - S8010118: Annotate jdk caller sensitive methods with @sun.reflect.CallerSensitive
   - S8010213: Some api/javax_net/SocketFactory tests fail in 7u25 nightly build
   - S8010714: XML DSig API allows a RetrievalMethod to reference another RetrievalMethod
+  - S8010727: WLS fails to add a logger with "" in its own LogManager subclass instance
+  - S8010939: Deadlock in LogManager
+  - S8011139: (reflect) Revise checking in getEnclosingClass
   - S8011154: java/awt/Frame/ShapeNotSetSometimes/ShapeNotSetSometimes.java failed since 7u25b03 on windows
   - S8011313: OCSP timeout set to wrong value if com.sun.security.ocsp.timeout not defined
+  - S8011990: TEST_BUG: java/util/logging/bundlesearch/ResourceBundleSearchTest.java fails on Windows
   - S8011992: java/awt/image/mlib/MlibOpsTest.java failed since jdk7u25b05
   - S8012112: java/awt/image/mlib/MlibOpsTest.java fails on sparc solaris
+  - S8012243: about 30% regression on specjvm2008.serial on 7u25 comparing 7u21
   - S8012617: ArrayIndexOutOfBoundsException with some fonts using LineBreakMeasurer
   - S8012933: Test closed/java/awt/Dialog/DialogAnotherThread/JaWSTest.java fails since jdk 7u25 b07
   - S8013196: TimeZone.getDefault() throws NPE due to sun.awt.AppContext.getAppContext()
+  - S8013380: Removal of stack walk to find resource bundle breaks Glassfish startup
   - S8014205: Most of the Swing dialogs are blank on one win7 MUI
   - S8014427: REGRESSION: closed/javax/imageio/plugins/bmp/Write3ByteBgrTest.java fails since 7u25 b09
-  - S8014618: Need to strip leading zeros in TlsPremasterSecret of DHKeyAgreement
+  - S8014618, RH868136: Need to strip leading zeros in TlsPremasterSecret of DHKeyAgreement
   - S8014676: Java debugger may fail to run
+  - S8014718: Netbeans IDE begins to throw a lot exceptions since 7u25 b10
+  - S8014745: Provide a switch to allow stack walk search of resource bundle
   - S8014968: OCSP and CRL connection timeout is set to four hours by default
 
 New in release 1.12.5 (2013-04-24):
