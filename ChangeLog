@@ -1,3 +1,58 @@
+2013-07-10  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* patches/security/20130618/7158805-nested_subroutine_rewriting-it6.patch:
+	Readd parts of patch removed without note in
+	an earlier backport and fix copyright headers to
+	apply (2011 instead of 2010).
+
+2013-07-09  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* patches/ecj/ant.patch,
+	* patches/openjdk/6990754-handle_renames.patch,
+	* patches/openjdk/6990754-use_native_memory_for_symboltable.patch,
+	* patches/openjdk/7008809-report_class_in_arraystoreexception.patch,
+	* patches/openjdk/7014851-unused_parallel_compaction_code.patch,
+	* patches/openjdk/7017732-move_static_fields_to_class.patch,
+	* patches/openjdk/7036747-elfstringtable.patch,
+	* patches/openjdk/7086585-flexible_field_injection.patch,
+	* patches/openjdk/7188114-alternate_command_line_parser.patch,
+	* patches/openjdk/7199143-OCSP_timeout.patch,
+	* patches/openjdk/8002070-remove_logger_stack_search.patch,
+	* patches/openjdk/8002070-remove_logger_stack_search_2.patch,
+	* patches/openjdk/8006120-server_jre.patch,
+	* patches/openjdk/8006536-remove_trailing_slashes.patch,
+	* patches/openjdk/8009463-space_and_final_backslash.patch,
+	* patches/openjdk/8010118-caller_sensitive.patch,
+	* patches/openjdk/8010213-set_socketoptions_windows.patch,
+	* patches/openjdk/8011139-revise_checking_getenclosingclass.patch,
+	* patches/openjdk/8011313-OCSP_timeout_wrong_value.patch,
+	* patches/openjdk/8011990-logger_test_urls.patch,
+	* patches/openjdk/8012243-serial_regression.patch,
+	* patches/openjdk/8013380-handle_renames.patch,
+	* patches/openjdk/8013380-logger_stack_walk_glassfish.patch,
+	* patches/openjdk/8014205-blank_swing_dialogs_windows.patch,
+	* patches/openjdk/8014618-strip_leading_zeros_premastersecret.patch,
+	* patches/openjdk/8014676-javadebugger_space_in_paths.patch,
+	* patches/openjdk/8014745-logger_stack_walk_switch.patch,
+	* patches/openjdk/8014968-OCSP_timeout_default.patch,
+	* patches/security/20130618/7158805-nested_subroutine_rewriting-it6.patch,
+	* patches/security/20130618/8001330-checking_order_improvement-it6.patch,
+	* patches/security/20130618/hs_merge-01.patch,
+	* patches/security/20130618/hs_merge-02.patch,
+	* patches/security/20130618/hs_merge-03.patch,
+	* patches/security/20130618/hs_merge-04.patch,
+	* patches/sparc.patch:
+	Remove unused patches.
+	* Makefile.am:
+	(ICEDTEA_PATCHES): Remove patches which need more testing before
+	release.
+	* patches/ecj/override.patch: Drop recent addition.  In accordance with
+	PR1397, we should avoid extending this patch in favour of either not
+	including @Override additions or setting source/target correctly.
+	* patches/security/20130618/7158805-nested_subroutine_rewriting.patch,
+	* patches/security/20130618/8001330-checking_order_improvement.patch:
+	Replace with Chris' patches, regenerated as unified diffs.
+
 2013-07-03  Omair Majid  <omajid@redhat.com>
 
 	* patches/openjdk/6541350-tz_display_names_l10n.patch,
@@ -63,7 +118,9 @@
 	* NEWS: Update with backports.
 
 2013-06-26  Chris Phillips <chrisphi@redhat.com>
-	* Makefile.am (SECURITY_PATCHES): Drop
+
+	* Makefile.am:
+	(SECURITY_PATCHES): Drop
         patches/security/20130618/7158805-nested_subroutine_rewriting.patch
         patches/security/20130618/8001330-checking_order_improvement.patch
         patches/openjdk/7036747-elfstringtable.patch

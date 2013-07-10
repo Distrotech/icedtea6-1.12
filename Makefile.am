@@ -398,8 +398,8 @@ SECURITY_PATCHES = \
 	patches/security/20130618/diamond_fix.patch \
 	patches/security/20130618/handle_npe.patch \
 	patches/security/20130618/javac_issue.patch \
-	patches/security/20130618/7158805-nested_subroutine_rewriting-it6.patch \
-	patches/security/20130618/8001330-checking_order_improvement-it6.patch \
+	patches/security/20130618/7158805-nested_subroutine_rewriting.patch \
+	patches/security/20130618/8001330-checking_order_improvement.patch \
 	patches/security/20130618/8000642-better_transportation_handling.patch \
 	patches/openjdk/6786028-wcag_bold_tags.patch \
 	patches/openjdk/6786682-wcag_lang.patch \
@@ -653,40 +653,20 @@ ICEDTEA_PATCHES = \
 	patches/object-factory-cl-internal.patch \
 	patches/openjdk/8009530-icu_kern_table_support_broken.patch \
 	patches/openjdk/7171223-strict_aliasing.patch \
-	patches/openjdk/7188114-alternate_command_line_parser.patch \
-	patches/openjdk/7199143-OCSP_timeout.patch \
-	patches/openjdk/8006120-server_jre.patch \
-	patches/openjdk/8006536-remove_trailing_slashes.patch \
 	patches/openjdk/8009165-inappropriate_method_in_reflectutil.patch \
 	patches/openjdk/8009217-fix_test_compile.patch \
-	patches/openjdk/8009463-space_and_final_backslash.patch \
 	patches/openjdk/8009610-blacklist_malware_certificate.patch \
-	patches/openjdk/8010213-set_socketoptions_windows.patch \
 	patches/openjdk/8010714-xml_dsig_retrievalmethod.patch \
-	patches/openjdk/8011154-awt_regresssion.patch \
-	patches/openjdk/8011313-OCSP_timeout_wrong_value.patch \
+	patches/openjdk/8011154-awt_regression.patch \
 	patches/openjdk/8011992-MlibOpsTest_failed.patch \
 	patches/openjdk/8012112-MlibOpsTest_fails.patch \
 	patches/openjdk/8012617-arrayindexoutofbounds_linebreakmeasurer.patch \
 	patches/openjdk/8012933-appcontext_disposed_too_early.patch \
 	patches/openjdk/8013196-TimeZone_getDefault_throws_exception.patch \
-	patches/openjdk/8014205-blank_swing_dialogs_windows.patch \
-	patches/openjdk/8014427-raster_regresssion.patch \
-	patches/openjdk/8014618-strip_leading_zeros_premastersecret.patch \
-	patches/openjdk/8014676-javadebugger_space_in_paths.patch \
-	patches/openjdk/8014968-OCSP_timeout_default.patch \
-	patches/openjdk/8002070-remove_logger_stack_search.patch \
-	patches/openjdk/8002070-remove_logger_stack_search_2.patch \
-	patches/openjdk/8010118-caller_sensitive.patch \
+	patches/openjdk/8014427-raster_regression.patch \
 	patches/openjdk/8010727-empty_logger_name.patch \
 	patches/openjdk/8010939-logmanager_deadlock.patch \
-	patches/openjdk/8011990-logger_test_urls.patch \
-	patches/openjdk/8013380-logger_stack_walk_glassfish.patch \
-	patches/openjdk/8013380-handle_renames.patch \
-	patches/openjdk/8014745-logger_stack_walk_switch.patch \
-	patches/openjdk/8012243-serial_regression.patch \
 	patches/openjdk/8014718-remove_logging_suntoolkit.patch \
-	patches/openjdk/8011139-revise_checking_getenclosingclass.patch \
 	patches/openjdk/8009996-emitter_bean.patch \
 	patches/openjdk/6541350-tz_display_names_l10n.patch \
 	patches/openjdk/6821191-tz_display_names_l10n.patch \
