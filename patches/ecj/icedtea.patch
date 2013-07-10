@@ -602,18 +602,6 @@ diff -Nru openjdk-ecj.orig/jdk/make/common/Release.gmk openjdk-ecj/jdk/make/comm
 diff -Nru openjdk-ecj.orig/jdk/make/common/Rules.gmk openjdk-ecj/jdk/make/common/Rules.gmk
 --- openjdk-ecj.orig/jdk/make/common/Rules.gmk	2011-01-07 21:32:51.000000000 +0000
 +++ openjdk-ecj/jdk/make/common/Rules.gmk	2012-01-18 21:43:04.150185964 +0000
-@@ -235,8 +235,9 @@
- 	  $(ECHO) "# Java sources to be compiled: (listed in file $(JAVA_SOURCE_LIST))"; \
- 	  $(CAT) $(JAVA_SOURCE_LIST); \
- 	  $(ECHO) "# Running javac:"; \
--	  $(ECHO) $(JAVAC_CMD) -sourcepath "$(SOURCEPATH)" -d $(CLASSDESTDIR) @$(JAVA_SOURCE_LIST); \
--	  $(JAVAC_CMD) -sourcepath "$(SOURCEPATH)" -d $(CLASSDESTDIR) @$(JAVA_SOURCE_LIST); \
-+	   $(ECHO) $(JAVAC_CMD) -sourcepath "$(SOURCEPATH)" -bootclasspath "$(ICEDTEA_RT):$(ICEDTEA_JCE):$(CLASSDESTDIR)" \
-+         -d $(CLASSDESTDIR) @$(JAVA_SOURCE_LIST); \
-+         $(JAVAC_CMD) -sourcepath "$(SOURCEPATH)" -bootclasspath "$(ICEDTEA_RT):$(ICEDTEA_JCE):$(CLASSDESTDIR)" -d $(CLASSDESTDIR) @$(JAVA_SOURCE_LIST); \
- 	fi
- 	@$(java-vm-cleanup)
- 
 @@ -302,6 +303,8 @@
  	$(JAVAH_CMD) -d $(CLASSHDRDIR)/ \
  		$(CLASSES.export) $(subst $$,\$$,$(EXPORTED_inner))

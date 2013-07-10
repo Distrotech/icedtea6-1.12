@@ -154,6 +154,12 @@ IT_CHECK_FOR_METHOD([JAVAX_NET_SSL_KEYSTOREBUILDERPARAMETERS_GETPARAMETERS],
   [new javax.net.ssl.KeyStoreBuilderParameters(new java.util.ArrayList<java.security.KeyStore.Builder>()).getParameters()]
 )
 
+dnl PR57420 - java.sql.SQLException
+IT_CHECK_FOR_CONSTRUCTOR([JAVA_SQL_EXCEPTION_THROWABLE],[java.sql.SQLException],[Throwable.class],[new Throwable()])
+IT_CHECK_FOR_CONSTRUCTOR([JAVA_SQL_EXCEPTION_REASON_THROWABLE],[java.sql.SQLException],[String.class,Throwable.class],["Something went wrong",new Throwable()])
+IT_CHECK_FOR_CONSTRUCTOR([JAVA_SQL_EXCEPTION_REASON_STATE_THROWABLE],[java.sql.SQLException],[String.class,String.class,Throwable.class],["Something went wrong","",new Throwable()])
+IT_CHECK_FOR_CONSTRUCTOR([JAVA_SQL_EXCEPTION_REASON_STATE_CODE_THROWABLE],[java.sql.SQLException],[String.class,String.class,Integer.TYPE,Throwable.class],["Something went wrong","",666,new Throwable()])
+
 # Use xvfb-run if found to run gui tests (check-jdk).
 AC_CHECK_PROG(XVFB_RUN_CMD, xvfb-run, [xvfb-run -a -e xvfb-errors], [])
 AC_SUBST(XVFB_RUN_CMD)

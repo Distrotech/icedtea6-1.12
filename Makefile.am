@@ -140,6 +140,27 @@ ICEDTEA_BOOTSTRAP_CLASSES += \
 	$(SHARE)/javax/net/ssl/KeyStoreBuilderParameters.java
 endif
 
+#PR57420 - java.sql.SQLException
+if LACKS_JAVA_SQL_EXCEPTION_THROWABLE
+ICEDTEA_BOOTSTRAP_CLASSES += \
+	$(SHARE)/java/sql/SQLException.java
+else
+if LACKS_JAVA_SQL_EXCEPTION_REASON_THROWABLE
+ICEDTEA_BOOTSTRAP_CLASSES += \
+	$(SHARE)/java/sql/SQLException.java
+else
+if LACKS_JAVA_SQL_EXCEPTION_REASON_STATE_THROWABLE
+ICEDTEA_BOOTSTRAP_CLASSES += \
+	$(SHARE)/java/sql/SQLException.java
+else
+if LACKS_JAVA_SQL_EXCEPTION_REASON_STATE_CODE_THROWABLE
+ICEDTEA_BOOTSTRAP_CLASSES += \
+	$(SHARE)/java/sql/SQLException.java
+endif
+endif
+endif
+endif
+
 # Flags
 MEMORY_LIMIT = -J-Xmx1024m
 IT_CFLAGS=$(CFLAGS) $(ARCHFLAG)
@@ -753,7 +774,8 @@ ICEDTEA_ECJ_PATCHES = \
 	patches/ecj/corba-dependencies.patch \
 	patches/ecj/jaxws-langtools-dependency.patch \
 	patches/ecj/jaxws-jdk-dependency.patch \
-	patches/ecj/hotspot-jdk-dependency.patch
+	patches/ecj/hotspot-jdk-dependency.patch \
+	patches/ecj/jcp-importsources.patch
 
 if DTDTYPE_QNAME
 ICEDTEA_ECJ_PATCHES += \

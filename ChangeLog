@@ -1,3 +1,33 @@
+2013-07-09  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* Makefile.am:
+	(ICEDTEA_ECJ_PATCHES): Add new patch.
+	* patches/ecj/jcp-importsources.patch:
+	Include imported JAXP sources in sourcepath
+	when building org.jcp code.
+
+2013-07-09  Omair Majid  <omajid@redhat.com>
+
+	* patches/ecj/needs-6.patch: Build additional code
+	using -source 6.
+
+2013-05-15  Andrew John Hughes  <gnu.andrew@member.fsf.org>
+
+	* Makefile.am:
+	(ICEDTEA_BOOTSTRAP_CLASSES): Add java.sql.SQLException
+	if any of the constructors are missing.
+	* javac.in: Handle -Xbootclasspath/p, -Xbootclasspath
+	and -Xbootclasspath/a by prepending, setting or appending
+	its value to the bootclasspath option used to ecj,
+	respectively.
+	* configure.ac: Test for the java.sql.SQLException
+	constructors.
+	* patches/ecj/icedtea.patch:
+	Drop addition of ICEDTEA_RT in common/Rules.gmk in JDK
+	altogether.
+	* patches/ecj/needs-6.patch:
+	Add java.awt Makefile.
+
 2013-07-10  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* configure.ac: Bump to 1.12.6.
