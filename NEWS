@@ -13,6 +13,31 @@ CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
 New in release 1.12.6 (2013-06-XX):
 
+* Security fixes
+* Backports
+  - S7188114: (launcher) need an alternate command line parser for Windows
+  - S7199143: RFE: OCSP revocation checker should provide possibility to specify connection timeout
+  - S8006120: Provide "Server JRE" for 7u train
+  - S8006536: [launcher]  removes trailing slashes on arguments
+  - S8009165: Fix for 8006435 needs revision
+  - S8009217: REGRESSION: test com/sun/org/apache/xml/internal/security/transforms/ClassLoaderTest.java fails to compile since 7u21b03
+  - S8009463: Regression test test\java\lang\Runtime\exec\ArgWithSpaceAndFinalBackslash.java failing.
+  - S8009610: Blacklist certificate used with malware.
+  - S8010213: Some api/javax_net/SocketFactory tests fail in 7u25 nightly build
+  - S8010714: XML DSig API allows a RetrievalMethod to reference another RetrievalMethod
+  - S8011154: java/awt/Frame/ShapeNotSetSometimes/ShapeNotSetSometimes.java failed since 7u25b03 on windows
+  - S8011313: OCSP timeout set to wrong value if com.sun.security.ocsp.timeout not defined
+  - S8011992: java/awt/image/mlib/MlibOpsTest.java failed since jdk7u25b05
+  - S8012112: java/awt/image/mlib/MlibOpsTest.java fails on sparc solaris
+  - S8012617: ArrayIndexOutOfBoundsException with some fonts using LineBreakMeasurer
+  - S8012933: Test closed/java/awt/Dialog/DialogAnotherThread/JaWSTest.java fails since jdk 7u25 b07
+  - S8013196: TimeZone.getDefault() throws NPE due to sun.awt.AppContext.getAppContext()
+  - S8014205: Most of the Swing dialogs are blank on one win7 MUI
+  - S8014427: REGRESSION: closed/javax/imageio/plugins/bmp/Write3ByteBgrTest.java fails since 7u25 b09
+  - S8014618: Need to strip leading zeros in TlsPremasterSecret of DHKeyAgreement
+  - S8014676: Java debugger may fail to run
+  - S8014968: OCSP and CRL connection timeout is set to four hours by default
+
 New in release 1.12.5 (2013-04-24):
 
 * New features
