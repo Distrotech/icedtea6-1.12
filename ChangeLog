@@ -1,5 +1,14 @@
 2013-07-10  Andrew John Hughes  <gnu.andrew@redhat.com>
 
+	* configure.ac: Bump to 1.12.6.
+
+2013-07-09  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* NEWS: Sync with patches now included
+	and add release date.
+
+2013-07-10  Andrew John Hughes  <gnu.andrew@redhat.com>
+
 	* patches/security/20130618/7158805-nested_subroutine_rewriting-it6.patch:
 	Readd parts of patch removed without note in
 	an earlier backport and fix copyright headers to
