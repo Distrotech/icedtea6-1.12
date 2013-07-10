@@ -1,5 +1,10 @@
 2013-07-10  Andrew John Hughes  <gnu.andrew@redhat.com>
 
+	* configure.ac: Set to 1.12.7pre.
+	* NEWS: Add 1.12.7 section.
+
+2013-07-10  Andrew John Hughes  <gnu.andrew@redhat.com>
+
 	* patches/security/20130618/7158805-nested_subroutine_rewriting-it6.patch:
 	Make patch apply again.
 
