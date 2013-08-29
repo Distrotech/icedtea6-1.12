@@ -708,7 +708,9 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/6893617-cnctx_always_uses_default_orb.patch \
 	patches/openjdk/7196533-timezone_bottleneck.patch \
 	patches/openjdk/6636370-appcontext_simplification.patch \
-	patches/openjdk/6636331-appcontext_concurrentmodificationexception.patch
+	patches/openjdk/6636331-appcontext_concurrentmodificationexception.patch \
+	patches/openjdk/8014469-tzdata2013c.patch \
+	patches/openjdk/8020054-tzdata2013d.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \
