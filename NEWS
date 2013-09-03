@@ -16,6 +16,8 @@ New in release 1.12.7 (2013-XX-XX):
 * Backports
  - S6840152: JVM crashes when heavyweight monitors are used
  - S7022999: Can't build with FORCE_TIERED=0
+* Bug fixes
+  - PR1188: ASM Interpreter and Thumb2 JIT javac miscompile modulo reminder on armel.
 
 New in release 1.12.6 (2013-07-10):
 
