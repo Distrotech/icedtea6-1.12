@@ -1,3 +1,8 @@
+2013-09-06  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* ChangeLog: Credit Omair for original
+	version of RH995488 patch.
+
 2013-09-05  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* Makefile.am:
@@ -5,6 +10,7 @@
 	* patches/rh995488-rhel_tz_fix.patch:
 	Use /etc/sysconfig/clock on RHEL & clones
 	so that they don't search /usr/share/zoneinfo.
+	Main part of patch originally by Omair Majid.
 	* NEWS: Mention patch.
 
 2013-09-02  Andrew John Hughes  <gnu.andrew@redhat.com>
