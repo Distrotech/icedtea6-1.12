@@ -1,6 +1,11 @@
 2013-09-19  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* configure.ac:
+	Check if CC gets set and fail if not.
+
+2013-09-19  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* configure.ac:
 	Check if CXX gets set and fail if not.
 
 2014-01-21  Andrew John Hughes  <gnu.andrew@redhat.com>
