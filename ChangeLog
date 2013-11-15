@@ -1,3 +1,10 @@
+2013-03-26  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* Makefile.am:
+	(ICEDTEA_PATCHES): Add new backport.
+	* patches/openjdk/6840152-jvm_crashes_with_heavyweight_monitors.patch:
+	Backport suggested by Xerxes for hs20.
+
 2013-08-29  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* Makefile.am:

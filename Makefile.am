@@ -710,7 +710,8 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/6636370-appcontext_simplification.patch \
 	patches/openjdk/6636331-appcontext_concurrentmodificationexception.patch \
 	patches/openjdk/8014469-tzdata2013c.patch \
-	patches/openjdk/8020054-tzdata2013d.patch
+	patches/openjdk/8020054-tzdata2013d.patch \
+	patches/openjdk/6840152-jvm_crashes_with_heavyweight_monitors.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \
