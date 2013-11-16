@@ -13,6 +13,10 @@ CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
 New in release 1.12.7 (2013-XX-XX):
 
+* Backports
+ - S6840152: JVM crashes when heavyweight monitors are used
+ - S7022999: Can't build with FORCE_TIERED=0
+
 New in release 1.12.6 (2013-07-10):
 
 * Security fixes
