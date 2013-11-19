@@ -464,6 +464,16 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/6693253-security_warning.patch \
 	patches/openjdk/6444769-windowwithwarningtest.patch \
 	patches/openjdk/6656651-windows_lcd_glyphs.patch \
+	patches/openjdk/6791502-invalid_icc_profile.patch \
+	patches/openjdk/6793818-jpegimagereader_too_greedy.patch \
+	patches/openjdk/6631559-dont_load_libjpeg_to_register_imageio_plugins.patch \
+	patches/openjdk/4893408-jpegreader_byte_gray.patch \
+	patches/openjdk/6888215-jpeg_memory_leak.patch \
+	patches/openjdk/6989774-imageio_compiler_warnings.patch \
+	patches/openjdk/7018912-potential_buffer_overruns_in_jpeg.patch \
+	patches/openjdk/6989760-native_warnings.patch \
+	patches/openjdk/7013519-integer_overflows.patch \
+	patches/openjdk/8020983-outofmemoryerror_jpegimagewriter.patch \
 	patches/notice-safepoints.patch \
 	patches/parisc-opt.patch \
 	patches/lucene-crash.patch \
@@ -712,7 +722,9 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/8014469-tzdata2013c.patch \
 	patches/openjdk/8020054-tzdata2013d.patch \
 	patches/openjdk/6840152-jvm_crashes_with_heavyweight_monitors.patch \
-	patches/openjdk/7022999-fastlocking_compiler1_only.patch
+	patches/openjdk/7022999-fastlocking_compiler1_only.patch \
+	patches/imageiojpeg_sync.patch \
+	patches/openjdk/8005194-scale_memory_leak.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \
