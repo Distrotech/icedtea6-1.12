@@ -1,6 +1,6 @@
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/encoding/CachedCodeBase.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/CachedCodeBase.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/encoding/CachedCodeBase.java	2012-09-21 19:59:13.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/CachedCodeBase.java	2012-10-30 14:13:12.248547263 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/encoding/CachedCodeBase.java	2012-10-26 19:21:48.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/CachedCodeBase.java	2013-11-20 19:30:53.206244071 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2000, 2004, Oracle and/or its affiliates. All rights reserved.
@@ -138,8 +138,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/encoding/Ca
  
          // It's now safe to use the delegate
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PIHandlerImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PIHandlerImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PIHandlerImpl.java	2012-10-30 14:12:52.004218150 +0000
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PIHandlerImpl.java	2012-10-30 14:13:12.260547458 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PIHandlerImpl.java	2013-11-20 18:00:46.589003692 +0000
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PIHandlerImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -58,7 +58,7 @@
  import org.omg.PortableInterceptor.TRANSPORT_RETRY;
  import org.omg.PortableInterceptor.USER_EXCEPTION;
@@ -149,7 +149,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptor
  
  import com.sun.corba.se.pept.encoding.OutputObject;
  
-@@ -112,10 +112,10 @@
+@@ -111,10 +111,10 @@
          }
      }
  
@@ -164,7 +164,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptor
  
      // A unique id used in ServerRequestInfo.
      // This does not correspond to the GIOP request id.
-@@ -178,6 +178,21 @@
+@@ -177,6 +177,21 @@
              }
          };
  
@@ -187,8 +187,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptor
      // maintenance.
      //
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PINoOpHandlerImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PINoOpHandlerImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PINoOpHandlerImpl.java	2012-10-30 14:12:52.004218150 +0000
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PINoOpHandlerImpl.java	2012-10-30 14:13:12.260547458 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PINoOpHandlerImpl.java	2013-11-20 18:00:46.589003692 +0000
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/PINoOpHandlerImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
@@ -207,8 +207,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/interceptor
      }
  
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerFactoryImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerFactoryImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerFactoryImpl.java	2012-09-21 19:59:14.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerFactoryImpl.java	2012-10-30 14:13:12.260547458 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerFactoryImpl.java	2012-10-26 19:21:48.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerFactoryImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
@@ -238,8 +238,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/monitoring/
 +    }
  }
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerImpl.java	2012-09-21 19:59:14.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerImpl.java	2012-10-30 14:13:12.260547458 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerImpl.java	2012-10-26 19:21:48.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/monitoring/MonitoringManagerImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
@@ -286,8 +286,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/monitoring/
 +    }
  }
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl.java	2012-10-30 14:12:52.012218279 +0000
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl.java	2012-10-30 14:14:21.397671415 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl.java	2013-11-20 18:00:46.605003932 +0000
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -23,35 +23,37 @@
   * questions.
   */
@@ -395,7 +395,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
  import com.sun.corba.se.impl.interceptors.PIHandlerImpl;
  import com.sun.corba.se.impl.interceptors.PINoOpHandlerImpl;
  import com.sun.corba.se.impl.ior.TaggedComponentFactoryFinderImpl;
-@@ -185,6 +188,7 @@
+@@ -184,6 +187,7 @@
  
      private java.lang.Object runObj = new java.lang.Object();
      private java.lang.Object shutdownObj = new java.lang.Object();
@@ -403,7 +403,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
      private static final byte STATUS_OPERATING = 1;
      private static final byte STATUS_SHUTTING_DOWN = 2;
      private static final byte STATUS_SHUTDOWN = 3;
-@@ -193,6 +197,7 @@
+@@ -192,6 +196,7 @@
  
      // XXX Should we move invocation tracking to the first level server dispatcher?
      private java.lang.Object invocationObj = new java.lang.Object();
@@ -411,7 +411,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
  
      // thread local variable to store a boolean to detect deadlock in
      // ORB.shutdown(true).
-@@ -220,8 +225,6 @@
+@@ -219,8 +224,6 @@
  
      private int transientServerId ;
  
@@ -420,7 +420,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
      private ServiceContextRegistry serviceContextRegistry ;
  
      // Needed here to implement connect/disconnect
-@@ -279,6 +282,8 @@
+@@ -278,6 +281,8 @@
  
      private ObjectKeyFactory objectKeyFactory ;
  
@@ -429,7 +429,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
      private ThreadPoolManager threadpoolMgr;
  
      private void dprint( String msg )
-@@ -322,11 +327,17 @@
+@@ -321,11 +326,17 @@
  
      public ORBVersion getORBVersion()
      {
@@ -447,7 +447,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          orbVersionThreadLocal.set(verObj);
      }
  
-@@ -347,46 +358,6 @@
+@@ -346,46 +357,6 @@
          // end of this method.
          pihandler = new PINoOpHandlerImpl( );
  
@@ -494,7 +494,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          // This is the unique id of this server (JVM). Multiple incarnations
          // of this server will get different ids.
          // Compute transientServerId = milliseconds since Jan 1, 1970
-@@ -547,6 +518,9 @@
+@@ -546,6 +517,9 @@
  
      public void set_parameters( Properties props )
      {
@@ -504,7 +504,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          preInit( null, props ) ;
          DataCollector dataCollector =
              DataCollectorFactory.create( props, getLocalHostName() ) ;
-@@ -788,6 +762,9 @@
+@@ -787,6 +761,9 @@
       */
      public void notifyORB()
      {
@@ -514,7 +514,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (this.svResponseReceived) {
              this.svResponseReceived.set();
              this.svResponseReceived.notify();
-@@ -854,6 +831,8 @@
+@@ -853,6 +830,8 @@
      // Note that we connect this if we have not already done so.
      public synchronized IOR getFVDCodeBaseIOR()
      {
@@ -523,7 +523,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          if (codeBaseIOR != null) // i.e. We are already connected to it
              return codeBaseIOR;
  
-@@ -1118,6 +1097,8 @@
+@@ -1117,6 +1096,8 @@
  
      public synchronized void setTypeCodeForClass(Class c, TypeCodeImpl tci)
      {
@@ -532,7 +532,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          if (typeCodeForClassMap == null)
              typeCodeForClassMap = Collections.synchronizedMap(
                  new WeakHashMap(64));
-@@ -1128,6 +1109,8 @@
+@@ -1127,6 +1108,8 @@
  
      public synchronized TypeCodeImpl getTypeCodeForClass(Class c)
      {
@@ -541,7 +541,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          if (typeCodeForClassMap == null)
              return null;
          return (TypeCodeImpl)typeCodeForClassMap.get(c);
-@@ -1210,6 +1193,10 @@
+@@ -1209,6 +1192,10 @@
      {
          CorbaServerRequestDispatcher insnd ;
  
@@ -552,7 +552,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          if ((id == null) || (id.length() == 0))
              throw new InvalidName() ;
  
-@@ -1253,66 +1240,88 @@
+@@ -1252,66 +1239,88 @@
          }
      }
  
@@ -684,7 +684,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
      // Note that the caller must hold the ORBImpl lock.
      public void checkShutdownState()
      {
-@@ -1327,21 +1336,40 @@
+@@ -1326,21 +1335,40 @@
  
      public boolean isDuringDispatch()
      {
@@ -726,7 +726,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          }
      }
  
-@@ -1350,12 +1378,12 @@
+@@ -1349,12 +1377,12 @@
       *  not been shut down, it will start the shutdown process and block until
       *  the ORB has shut down before it destroys the ORB."
       */
@@ -742,7 +742,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
  	}
  
  	if (shutdownFirst) {
-@@ -1365,11 +1393,76 @@
+@@ -1364,11 +1392,76 @@
          synchronized (this) {
  	    if (status < STATUS_DESTROYED) {
  		getCorbaTransportManager().close();
@@ -820,7 +820,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
      }
  
      /**
-@@ -1434,18 +1527,27 @@
+@@ -1433,18 +1526,27 @@
  
      public OAInvocationInfo peekInvocationInfo()
      {
@@ -848,7 +848,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          StackImpl stack = (StackImpl)(OAInvocationInfoStack.get()) ;
          return (OAInvocationInfo)(stack.pop()) ;
      }
-@@ -1459,6 +1561,9 @@
+@@ -1458,6 +1560,9 @@
  
      public void initBadServerIdHandler()
      {
@@ -858,7 +858,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (badServerIdHandlerAccessLock) {
              Class cls = configData.getBadServerIdHandler() ;
              if (cls != null) {
-@@ -1477,6 +1582,9 @@
+@@ -1476,6 +1581,9 @@
  
      public void setBadServerIdHandler( BadServerIdHandler handler )
      {
@@ -868,7 +868,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (badServerIdHandlerAccessLock) {
              badServerIdHandler = handler;
          }
-@@ -1484,6 +1592,9 @@
+@@ -1483,6 +1591,9 @@
  
      public void handleBadServerId( ObjectKey okey )
      {
@@ -878,7 +878,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (badServerIdHandlerAccessLock) {
              if (badServerIdHandler == null)
                  throw wrapper.badServerId() ;
-@@ -1532,6 +1643,9 @@
+@@ -1531,6 +1642,9 @@
  
      public int getTransientServerId()
      {
@@ -888,7 +888,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          if( configData.getORBServerIdPropertySpecified( ) ) {
              // ORBServerId is specified then use that value
              return configData.getPersistentServerId( );
-@@ -1541,11 +1655,17 @@
+@@ -1540,11 +1654,17 @@
  
      public RequestDispatcherRegistry getRequestDispatcherRegistry()
      {
@@ -906,7 +906,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          return serviceContextRegistry ;
      }
  
-@@ -1563,12 +1683,18 @@
+@@ -1562,12 +1682,18 @@
      // XXX What about multi-homed host?
      public boolean isLocalHost( String hostName )
      {
@@ -925,7 +925,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          if ((subcontractId < ORBConstants.FIRST_POA_SCID) ||
              (subcontractId > ORBConstants.MAX_POA_SCID))
              return serverId == getTransientServerId( ) ;
-@@ -1659,6 +1785,9 @@
+@@ -1658,6 +1784,9 @@
  
      public ClientInvocationInfo createOrIncrementInvocationInfo()
      {
@@ -935,7 +935,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          StackImpl invocationInfoStack =
              (StackImpl) clientInvocationInfoStack.get();
          ClientInvocationInfo clientInvocationInfo = null;
-@@ -1682,10 +1811,13 @@
+@@ -1681,10 +1810,13 @@
  
      public void releaseOrDecrementInvocationInfo()
      {
@@ -951,7 +951,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          if (!invocationInfoStack.empty()) {
              clientInvocationInfo =
                  (ClientInvocationInfo)invocationInfoStack.peek();
-@@ -1705,6 +1837,9 @@
+@@ -1704,6 +1836,9 @@
  
      public ClientInvocationInfo getInvocationInfo()
      {
@@ -961,7 +961,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          StackImpl invocationInfoStack =
              (StackImpl) clientInvocationInfoStack.get();
          return (ClientInvocationInfo) invocationInfoStack.peek();
-@@ -1719,6 +1854,9 @@
+@@ -1718,6 +1853,9 @@
  
      public void setClientDelegateFactory( ClientDelegateFactory factory )
      {
@@ -971,7 +971,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (clientDelegateFactoryAccessorLock) {
              clientDelegateFactory = factory ;
          }
-@@ -1726,6 +1864,9 @@
+@@ -1725,6 +1863,9 @@
  
      public ClientDelegateFactory getClientDelegateFactory()
      {
@@ -981,7 +981,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (clientDelegateFactoryAccessorLock) {
              return clientDelegateFactory ;
          }
-@@ -1735,6 +1876,9 @@
+@@ -1734,6 +1875,9 @@
  
      public void setCorbaContactInfoListFactory( CorbaContactInfoListFactory factory )
      {
@@ -991,7 +991,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (corbaContactInfoListFactoryAccessLock) {
              corbaContactInfoListFactory = factory ;
          }
-@@ -1742,6 +1886,7 @@
+@@ -1741,6 +1885,7 @@
  
      public synchronized CorbaContactInfoListFactory getCorbaContactInfoListFactory()
      {
@@ -999,7 +999,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          return corbaContactInfoListFactory ;
      }
  
-@@ -1750,6 +1895,9 @@
+@@ -1749,6 +1894,9 @@
       */
      public void setResolver( Resolver resolver )
      {
@@ -1009,7 +1009,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (resolverLock) {
              this.resolver = resolver ;
          }
-@@ -1760,6 +1908,9 @@
+@@ -1759,6 +1907,9 @@
       */
      public Resolver getResolver()
      {
@@ -1019,7 +1019,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (resolverLock) {
              return resolver ;
          }
-@@ -1770,6 +1921,9 @@
+@@ -1769,6 +1920,9 @@
       */
      public void setLocalResolver( LocalResolver resolver )
      {
@@ -1029,7 +1029,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (resolverLock) {
              this.localResolver = resolver ;
          }
-@@ -1780,6 +1934,9 @@
+@@ -1779,6 +1933,9 @@
       */
      public LocalResolver getLocalResolver()
      {
@@ -1039,7 +1039,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (resolverLock) {
              return localResolver ;
          }
-@@ -1790,6 +1947,9 @@
+@@ -1789,6 +1946,9 @@
       */
      public void setURLOperation( Operation stringToObject )
      {
@@ -1049,7 +1049,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (urlOperationLock) {
              urlOperation = stringToObject ;
          }
-@@ -1800,6 +1960,9 @@
+@@ -1799,6 +1959,9 @@
       */
      public Operation getURLOperation()
      {
@@ -1059,7 +1059,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (urlOperationLock) {
              return urlOperation ;
          }
-@@ -1807,6 +1970,9 @@
+@@ -1806,6 +1969,9 @@
  
      public void setINSDelegate( CorbaServerRequestDispatcher sdel )
      {
@@ -1069,7 +1069,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (resolverLock) {
              insNamingDelegate = sdel ;
          }
-@@ -1814,16 +1980,25 @@
+@@ -1813,16 +1979,25 @@
  
      public TaggedComponentFactoryFinder getTaggedComponentFactoryFinder()
      {
@@ -1095,7 +1095,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          return taggedProfileTemplateFactoryFinder ;
      }
  
-@@ -1831,6 +2006,9 @@
+@@ -1830,6 +2005,9 @@
  
      public ObjectKeyFactory getObjectKeyFactory()
      {
@@ -1105,7 +1105,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (objectKeyFactoryAccessLock) {
              return objectKeyFactory ;
          }
-@@ -1838,6 +2016,9 @@
+@@ -1837,6 +2015,9 @@
  
      public void setObjectKeyFactory( ObjectKeyFactory factory )
      {
@@ -1115,7 +1115,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (objectKeyFactoryAccessLock) {
              objectKeyFactory = factory ;
          }
-@@ -1864,6 +2045,9 @@
+@@ -1863,6 +2044,9 @@
  
      public LegacyServerSocketManager getLegacyServerSocketManager()
      {
@@ -1125,7 +1125,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (legacyServerSocketManagerAccessLock) {
              if (legacyServerSocketManager == null) {
                  legacyServerSocketManager = new LegacyServerSocketManagerImpl(this);
-@@ -1876,6 +2060,9 @@
+@@ -1875,6 +2059,9 @@
  
      public void setThreadPoolManager(ThreadPoolManager mgr)
      {
@@ -1135,7 +1135,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
          synchronized (threadPoolManagerAccessLock) {
              threadpoolMgr = mgr;
          }
-@@ -1883,9 +2070,13 @@
+@@ -1882,9 +2069,13 @@
  
      public ThreadPoolManager getThreadPoolManager()
      {
@@ -1150,7 +1150,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
              }
              return threadpoolMgr;
          }
-@@ -1893,6 +2084,9 @@
+@@ -1892,6 +2083,9 @@
  
      public CopierManager getCopierManager()
      {
@@ -1161,8 +1161,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orb/ORBImpl
      }
  } // Class ORBImpl
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolImpl.java	2012-09-21 19:59:14.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolImpl.java	2012-10-30 14:13:12.260547458 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolImpl.java	2012-10-26 19:21:48.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, 2004, Oracle and/or its affiliates. All rights reserved.
@@ -1700,8 +1700,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/thr
              }
          }
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolManagerImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolManagerImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolManagerImpl.java	2012-09-21 19:59:14.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolManagerImpl.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolManagerImpl.java	2012-10-26 19:21:48.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/ThreadPoolManagerImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, 2004, Oracle and/or its affiliates. All rights reserved.
@@ -1841,8 +1841,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/thr
  
      /**
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/WorkQueueImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/WorkQueueImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/WorkQueueImpl.java	2012-09-21 19:59:14.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/WorkQueueImpl.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/WorkQueueImpl.java	2012-10-26 19:21:48.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/orbutil/threadpool/WorkQueueImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
@@ -1904,8 +1904,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/orbutil/thr
  
      public void setThreadPool(ThreadPool workerThreadPool) {
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaMessageMediatorImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaMessageMediatorImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaMessageMediatorImpl.java	2012-09-21 19:59:14.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaMessageMediatorImpl.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaMessageMediatorImpl.java	2013-11-20 18:00:38.548882990 +0000
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaMessageMediatorImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1666,7 +1666,9 @@
          ((CDRInputObject)messageMediator.getInputObject()).unmarshalHeader();
  
@@ -1918,15 +1918,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/protocol/Co
          ObjectKey okey = messageMediator.getObjectKey();
          if (orb.subcontractDebugFlag) {
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/transport/SelectorImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/transport/SelectorImpl.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/transport/SelectorImpl.java	2012-09-21 19:59:14.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/transport/SelectorImpl.java	2012-10-30 14:13:12.264547523 +0000
-@@ -1,5 +1,5 @@
- /*
-- * Copyright (c) 2003, 2004, Oracle and/or its affiliates. All rights reserved.
-+ * Copyright (c) 2003, 2012, Oracle and/or its affiliates. All rights reserved.
-  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-  *
-  * This code is free software; you can redistribute it and/or modify it
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/transport/SelectorImpl.java	2013-11-20 18:00:38.940888874 +0000
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/transport/SelectorImpl.java	2013-11-20 19:30:53.210244132 +0000
 @@ -68,8 +68,8 @@
      private HashMap listenerThreads;
      private HashMap readerThreads;
@@ -1939,8 +1932,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/impl/transport/S
  
      public SelectorImpl(ORB orb)
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/logging/data/ORBUtil.mc openjdk/corba/src/share/classes/com/sun/corba/se/spi/logging/data/ORBUtil.mc
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/logging/data/ORBUtil.mc	2012-09-21 19:59:15.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/logging/data/ORBUtil.mc	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/logging/data/ORBUtil.mc	2012-10-26 19:21:49.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/logging/data/ORBUtil.mc	2013-11-20 19:30:53.210244132 +0000
 @@ -1,6 +1,6 @@
  ;
  
@@ -1990,8 +1983,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/logging/data
  	    (CHUNK_OVERFLOW 1 WARNING "Data read past end of chunk without closing the chunk")
  	    (UNEXPECTED_EOF 2 WARNING "Grow buffer strategy called underflow handler")
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManagerFactory.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManagerFactory.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManagerFactory.java	2012-09-21 19:59:15.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManagerFactory.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManagerFactory.java	2012-10-26 19:21:49.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManagerFactory.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
@@ -2007,8 +2000,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/M
 +    void remove(String nameOfTheRoot);
  }
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManager.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManager.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManager.java	2012-09-21 19:59:15.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManager.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManager.java	2012-10-26 19:21:49.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/monitoring/MonitoringManager.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
@@ -2034,9 +2027,9 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/monitoring/M
    ///////////////////////////////////////
    // operations
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java	2012-09-21 19:59:15.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java	2012-10-30 14:13:12.264547523 +0000
-@@ -171,7 +171,7 @@
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java	2013-11-20 18:00:37.612868938 +0000
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java	2013-11-20 19:31:36.490895397 +0000
+@@ -172,7 +172,7 @@
  
      private static Map staticWrapperMap = new ConcurrentHashMap();
  
@@ -2045,7 +2038,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
  
      private static PresentationManager setupPresentationManager() {
          staticWrapper = ORBUtilSystemException.get(
-@@ -226,6 +226,14 @@
+@@ -221,6 +221,14 @@
          return pm;
      }
  
@@ -2058,9 +2051,9 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
 +    }
 +
      /**
-      * Returns the Presentation Manager for the current thread group, using the ThreadGroup-specific
+      * Returns the Presentation Manager for the current thread group, using the ThreadGroup-specific 
       * AppContext to hold it. Creates and records one if needed.
-@@ -302,6 +310,9 @@
+@@ -306,6 +314,9 @@
      // Typecode support: needed in both ORBImpl and ORBSingleton
      public TypeCodeImpl get_primitive_tc(int kind)
      {
@@ -2070,7 +2063,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
          try {
              return primitiveTypeCodeConstants[kind] ;
          } catch (Throwable t) {
-@@ -311,15 +322,20 @@
+@@ -315,15 +326,20 @@
  
      public synchronized void setTypeCode(String id, TypeCodeImpl code)
      {
@@ -2091,7 +2084,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
          return monitoringManager;
      }
  
-@@ -434,6 +450,9 @@
+@@ -438,6 +454,9 @@
       */
      public Logger getLogger( String domain )
      {
@@ -2101,7 +2094,7 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
          ORBData odata = getORBData() ;
  
          // Determine the correct ORBId.  There are 3 cases:
-@@ -510,6 +529,9 @@
+@@ -514,6 +533,9 @@
      //       This method must also be inherited by both ORB and ORBSingleton.
      public ByteBufferPool getByteBufferPool()
      {
@@ -2112,8 +2105,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orb/ORB.java
              byteBufferPool = new ByteBufferPoolImpl(this);
  
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPool.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPool.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPool.java	2012-09-21 19:59:15.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPool.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPool.java	2012-10-26 19:21:49.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPool.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
@@ -2139,8 +2132,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orbutil/thre
      * This method will return any instance of the WorkQueue. If the ThreadPool
      * instance only services one WorkQueue then that WorkQueue instance will
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPoolManager.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPoolManager.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPoolManager.java	2012-09-21 19:59:15.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPoolManager.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPoolManager.java	2012-10-26 19:21:49.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/orbutil/threadpool/ThreadPoolManager.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
@@ -2160,8 +2153,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/orbutil/thre
      /**
      * This method will return an instance of the threadpool given a threadpoolId,
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/protocol/PIHandler.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/protocol/PIHandler.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/protocol/PIHandler.java	2012-10-30 14:12:52.004218150 +0000
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/protocol/PIHandler.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/protocol/PIHandler.java	2013-11-20 18:00:46.589003692 +0000
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/protocol/PIHandler.java	2013-11-20 19:30:53.210244132 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2002, 2003, Oracle and/or its affiliates. All rights reserved.
@@ -2188,8 +2181,8 @@ diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/protocol/PIH
      * on the ORBInitializers, if any are defined.  This must be done here so that
      * the ORB can obtain the PIHandler BEFORE the ORBInitializers run, since they
 diff -Nru openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/protocol/RequestDispatcherRegistry.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/protocol/RequestDispatcherRegistry.java
---- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/protocol/RequestDispatcherRegistry.java	2012-09-21 19:59:15.000000000 +0100
-+++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/protocol/RequestDispatcherRegistry.java	2012-10-30 14:13:12.264547523 +0000
+--- openjdk.orig/corba/src/share/classes/com/sun/corba/se/spi/protocol/RequestDispatcherRegistry.java	2012-10-26 19:21:49.000000000 +0100
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/protocol/RequestDispatcherRegistry.java	2013-11-20 19:30:53.214244192 +0000
 @@ -1,5 +1,5 @@
  /*
 - * Copyright (c) 2002, 2003, Oracle and/or its affiliates. All rights reserved.

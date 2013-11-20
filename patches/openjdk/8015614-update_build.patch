@@ -1,0 +1,41 @@
+diff -Nru openjdk.orig/hotspot/make/windows/makefiles/compile.make openjdk/hotspot/make/windows/makefiles/compile.make
+--- openjdk.orig/hotspot/make/windows/makefiles/compile.make	2011-11-14 22:07:30.000000000 +0000
++++ openjdk/hotspot/make/windows/makefiles/compile.make	2013-10-30 14:42:53.066183860 +0000
+@@ -139,6 +139,7 @@
+ !if "$(MSC_VER)" == "1600"
+ COMPILER_NAME=VS2010
+ !endif
++SAFESEH_FLAG = /SAFESEH
+ !endif
+ 
+ # Add what version of the compiler we think this is to the compile line
+@@ -172,6 +173,7 @@
+ PRODUCT_OPT_OPTION   = /O2 /Oy-
+ FASTDEBUG_OPT_OPTION = /O2 /Oy-
+ DEBUG_OPT_OPTION     = /Od
++SAFESEH_FLAG = /SAFESEH
+ !endif
+ 
+ !if "$(COMPILER_NAME)" == "VS2005"
+@@ -188,6 +190,8 @@
+ # Manifest Tool - used in VS2005 and later to adjust manifests stored
+ # as resources inside build artifacts.
+ MT=mt.exe
++LD_FLAGS = $(SAFESEH_FLAG) $(LD_FLAGS)
++SAFESEH_FLAG = /SAFESEH
+ !endif
+ 
+ !if "$(COMPILER_NAME)" == "VS2008"
+diff -Nru openjdk.orig/hotspot/make/windows/makefiles/sa.make openjdk/hotspot/make/windows/makefiles/sa.make
+--- openjdk.orig/hotspot/make/windows/makefiles/sa.make	2011-11-14 22:07:30.000000000 +0000
++++ openjdk/hotspot/make/windows/makefiles/sa.make	2013-10-30 14:43:50.503058378 +0000
+@@ -102,6 +102,9 @@
+ !endif
+ SASRCFILE = $(AGENT_DIR)/src/os/win32/windbg/sawindbg.cpp
+ SA_LFLAGS = $(SA_LINK_FLAGS) /nologo /subsystem:console /map /debug /machine:$(MACHINE)
++!if "$(BUILDARCH)" == "i486"
++SA_LFLAGS = $(SAFESEH_FLAG) $(SA_LFLAGS)
++!endif
+ 
+ # Note that we do not keep sawindbj.obj around as it would then
+ # get included in the dumpbin command in build_vm_def.sh
