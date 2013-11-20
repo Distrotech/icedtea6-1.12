@@ -1,5 +1,9 @@
 2013-09-02  Andrew John Hughes  <gnu.andrew@redhat.com>
 
+	* NEWS: Add missing backport entries.
+
+2013-09-02  Andrew John Hughes  <gnu.andrew@redhat.com>
+
 	* Makefile.am:
 	(ICEDTEA_PATCHES): Add new backports.  Move
 	disable-cc-incompatible-sanity-checks and freetypeversion

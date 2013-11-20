@@ -17,6 +17,8 @@ New in release 1.12.7 (2013-XX-XX):
   - S4893408: JPEGReader throws IllegalArgException when setting the destination to BYTE_GRAY
   - S6563752: Build and test JDK7 with Sun Studio 12 Express compilers (prep makefiles)
   - S6631559: Registration of ImageIO plugins should not cause loading of jpeg.dlli and cmm.dll
+  - S6636331: ConcurrentModificationException in AppContext code
+  - S6636370: minor corrections and simplification of code in AppContext
   - S6729772: 64-bit build with SS12 compiler: SIGSEGV (0xb) at pc=0x0000000000000048, pid=14826, tid=2
   - S6791502: IIOException "Invalid icc profile" on jpeg after update from JDK5 to JDK6
   - S6793818: JpegImageReader is too greedy creating color profiles
@@ -33,7 +35,10 @@ New in release 1.12.7 (2013-XX-XX):
   - S7018912: [parfait] potential buffer overruns in imageio jpeg
   - S7022999: Can't build with FORCE_TIERED=0
   - S7038711: Fix CC_VER checks for compiler options, fix use of -Wno-clobber
+  - S7196533: TimeZone.getDefault() slow due to synchronization bottleneck
   - S8005194: [parfait] #353 sun/awt/image/jpeg/imageioJPEG.c Memory leak of pointer 'scale' allocated with calloc()
+  - S8014469: (tz) Support tzdata2013c
+  - S8020054: (tz) Support tzdata2013d
   - S8020983, RH976897: OutOfMemoryError caused by non garbage collected JPEGImageWriter Instances
 * Bug fixes
   - PR1188: ASM Interpreter and Thumb2 JIT javac miscompile modulo reminder on armel.
