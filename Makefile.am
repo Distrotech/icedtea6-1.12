@@ -491,7 +491,6 @@ ICEDTEA_PATCHES = \
 	patches/lcms.patch \
 	patches/print_lsb_release.patch \
 	patches/uname.patch \
-	patches/freetypeversion.patch \
 	patches/nomotif-6706121.patch \
 	patches/nomotif.patch \
 	patches/nomotif-mtoolkit.patch \
@@ -518,7 +517,6 @@ ICEDTEA_PATCHES = \
 	patches/jtreg-jrunscript.patch \
 	patches/network-unreachable.patch \
 	patches/dnd-filelists.patch \
-	patches/disable-cc-incompatible-sanity-checks.patch \
 	patches/explicit-target-arch.patch \
 	patches/openjdk/7019808-stack_noexec.patch \
 	patches/parisc.patch \
@@ -724,7 +722,17 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/6840152-jvm_crashes_with_heavyweight_monitors.patch \
 	patches/openjdk/7022999-fastlocking_compiler1_only.patch \
 	patches/imageiojpeg_sync.patch \
-	patches/openjdk/8005194-scale_memory_leak.patch
+	patches/openjdk/8005194-scale_memory_leak.patch \
+	patches/openjdk/6563752-ss12_support.patch \
+	patches/openjdk/6729772-opt_cleanup.patch \
+	patches/openjdk/6799141-split_out_versions.patch \
+	patches/freetypeversion.patch \
+	patches/openjdk/6816311-compiler_name.patch \
+	patches/openjdk/6974017-minorver_for_solaris.patch \
+	patches/openjdk/6980281-majorver_for_solaris.patch \
+	patches/openjdk/7000225-bad_tabs.patch \
+	patches/openjdk/7038711-fix_no-clobber_usage.patch \
+	patches/disable-cc-incompatible-sanity-checks.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \
@@ -786,7 +794,6 @@ ICEDTEA_ECJ_PATCHES = \
 	patches/ecj/spp.patch \
 	patches/ecj/jopt.patch \
 	patches/ecj/jaxp-dependency.patch \
-	patches/ecj/bootver.patch \
 	patches/ecj/getannotation-cast.patch \
 	patches/ecj/override.patch \
 	patches/ecj/xsltproc.patch \
