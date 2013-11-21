@@ -11,7 +11,7 @@ OJX - http://java.net/jira/browse/OPENJDK6-X
 
 CVE-XXXX-YYYY: http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
-New in release 1.12.7 (2013-XX-XX):
+New in release 1.12.7 (2013-11-21):
 
 * Security fixes
   - S8006900, CVE-2013-3829: Add new date/time capability
