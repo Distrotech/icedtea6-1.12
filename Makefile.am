@@ -794,11 +794,13 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/8009996-emitter_bean.patch \
 	patches/openjdk/6541350-tz_display_names_l10n.patch \
 	patches/openjdk/6821191-tz_display_names_l10n.patch \
+	patches/openjdk/6925851-pt_br.patch \
 	patches/openjdk/6977550-tzdata2010l.patch \
 	patches/openjdk/6996686-tzdata2010o.patch \
 	patches/openjdk/7017800-tzdata2011b.patch \
 	patches/openjdk/7027387-tzdata2011d.patch \
 	patches/openjdk/7033174-tzdata2011e.patch \
+	patches/openjdk/7035073-missing_pt_br_timezones.patch \
 	patches/openjdk/7039469-tzdata2011g.patch \
 	patches/openjdk/7090843-tzdata2011j.patch \
 	patches/openjdk/7103108-tzdata2011l.patch \
@@ -827,7 +829,8 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/7000225-bad_tabs.patch \
 	patches/openjdk/7038711-fix_no-clobber_usage.patch \
 	patches/disable-cc-incompatible-sanity-checks.patch \
-	patches/rh995488-rhel_tz_fix.patch
+	patches/rh995488-rhel_tz_fix.patch \
+	patches/openjdk/8025255-tzdata2013g.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \

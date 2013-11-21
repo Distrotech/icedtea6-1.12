@@ -101,6 +101,7 @@ New in release 1.12.7 (2013-XX-XX):
   - S6868539: javap should use current names for constant pool tags
   - S6888215: memory leak in jpeg plugin
   - S6902264: fix indentation of tableswitch and lookupswitch
+  - S6925851: Localize JRE into pt_BR
   - S6954275: XML signatures with reference data larger 16KB and cacheRef on fails to validate
   - S6974017: Upgrade required Solaris Studio compilers to 5.10 (12 update 1 + patches)
   - S6980281: SWAT: SwingSet2 got core dumped in Solaris-AMD64 using b107 swat build
@@ -110,10 +111,11 @@ New in release 1.12.7 (2013-XX-XX):
   - S7013519: [parfait] Integer overflows in 2D code
   - S7018912: [parfait] potential buffer overruns in imageio jpeg
   - S7022999: Can't build with FORCE_TIERED=0
+  - S7035073: Add missing timezones to TimeZoneNames_pt_BR.java
   - S7038711: Fix CC_VER checks for compiler options, fix use of -Wno-clobber
   - S7146431: java.security files out-of-sync
   - S7196533: TimeZone.getDefault() slow due to synchronization bottleneck
-   -S8000450: Restrict access to com/sun/corba/se/impl package
+  - S8000450: Restrict access to com/sun/corba/se/impl package
   - S8002070: Remove the stack search for a resource bundle for Logger to use
   - S8003992: File and other classes in java.io do not handle embedded nulls properly
   - S8004188: Rename src/share/lib/security/java.security to java.security-linux
@@ -153,6 +155,7 @@ New in release 1.12.7 (2013-XX-XX):
   - S8023964: java/io/IOException/LastErrorString.java should be @ignore-d
   - S8024914: Swapped usage of idx_t and bm_word_t types in bitMap.inline.hpp
   - S8025128: File.createTempFile fails if prefix is absolute path
+  - S8025255: (tz) Support tzdata2013g
   - OJ19: Fix test cases from 8010118 to work with OpenJDK 6
   - OJ20: Resolve merge issues with JAXP security fixes
   - OJ21: Remove @Override annotation added on interface by 2013/10/15 security fixes
