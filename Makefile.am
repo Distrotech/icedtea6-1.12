@@ -830,7 +830,8 @@ ICEDTEA_PATCHES = \
 	patches/openjdk/7038711-fix_no-clobber_usage.patch \
 	patches/disable-cc-incompatible-sanity-checks.patch \
 	patches/rh995488-rhel_tz_fix.patch \
-	patches/openjdk/8025255-tzdata2013g.patch
+	patches/openjdk/8025255-tzdata2013g.patch \
+	patches/d729448-32_bit_alignment.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \

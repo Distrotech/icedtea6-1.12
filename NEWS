@@ -162,6 +162,7 @@ New in release 1.12.7 (2013-11-21):
 * Bug fixes
   - PR1188: ASM Interpreter and Thumb2 JIT javac miscompile modulo reminder on armel.
   - RH995488: Java thinks that the default timezone is Busingen instead of Zurich
+  - D729448: 32-bit alignment on mips and mipsel
 
 New in release 1.12.6 (2013-07-10):
 
