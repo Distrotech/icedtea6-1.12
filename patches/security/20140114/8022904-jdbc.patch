@@ -1,0 +1,83 @@
+# HG changeset patch
+# User lancea
+# Date 1376581616 14400
+#      Thu Aug 15 11:46:56 2013 -0400
+# Node ID 6f78aa03ae3c195be644e61a28ee2ea311588afa
+# Parent  f2ddc5fa48bbca2a2e1a888bc617632b4f3526e0
+8022904: Enhance JDBC Parsers
+Reviewed-by: alanb, skoivu
+
+diff -Nru openjdk/jdk/src/share/classes/com/sun/rowset/internal/XmlReaderContentHandler.java openjdk/jdk/src/share/classes/com/sun/rowset/internal/XmlReaderContentHandler.java
+--- openjdk/jdk/src/share/classes/com/sun/rowset/internal/XmlReaderContentHandler.java
++++ openjdk/jdk/src/share/classes/com/sun/rowset/internal/XmlReaderContentHandler.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2003, 2006, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -659,7 +659,7 @@
+                      //Added the handling for Class tags to take care of maps
+                      //Makes an entry into the map upon end of class tag
+                      try{
+-                          typeMap.put(Key_map,Class.forName(Value_map));
++                          typeMap.put(Key_map,sun.reflect.misc.ReflectUtil.forName(Value_map));
+ 
+                         }catch(ClassNotFoundException ex) {
+                           throw new SAXException(MessageFormat.format(resBundle.handleGetObject("xmlrch.errmap").toString(), ex.getMessage()));
+diff -Nru openjdk/jdk/src/share/classes/javax/sql/rowset/spi/SyncFactory.java openjdk/jdk/src/share/classes/javax/sql/rowset/spi/SyncFactory.java
+--- openjdk/jdk/src/share/classes/javax/sql/rowset/spi/SyncFactory.java
++++ openjdk/jdk/src/share/classes/javax/sql/rowset/spi/SyncFactory.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2003, 2006, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -41,6 +41,8 @@
+ import java.io.FileInputStream;
+ import java.io.IOException;
+ import java.io.FileNotFoundException;
++import java.security.AccessController;
++import java.security.PrivilegedAction;
+ 
+ import javax.naming.*;
+ 
+@@ -394,7 +396,16 @@
+                 /*
+                  * Dependent on application
+                  */
+-                String strRowsetProperties = System.getProperty("rowset.properties");
++                String strRowsetProperties;
++                try {
++                    strRowsetProperties = AccessController.doPrivileged(new PrivilegedAction<String>() {
++                        public String run() {
++                            return System.getProperty("rowset.properties");
++                        }
++                    });
++                } catch (Exception ex) {
++                    strRowsetProperties = null;
++                }
+                 if ( strRowsetProperties != null) {
+                     // Load user's implementation of SyncProvider
+                     // here. -Drowset.properties=/abc/def/pqr.txt
+@@ -430,7 +441,16 @@
+              * load additional properties from -D command line
+              */
+             properties.clear();
+-            String providerImpls = System.getProperty(ROWSET_SYNC_PROVIDER);
++            String providerImpls;
++            try {
++                providerImpls = AccessController.doPrivileged(new PrivilegedAction<String>() {
++                    public String run() {
++                        return System.getProperty(ROWSET_SYNC_PROVIDER);
++                    }
++                });
++            } catch (Exception ex) {
++                providerImpls = null;
++            }
+ 
+             if (providerImpls != null) {
+                 int i = 0;

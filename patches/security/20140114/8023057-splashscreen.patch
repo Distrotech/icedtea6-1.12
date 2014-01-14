@@ -1,0 +1,96 @@
+# HG changeset patch
+# User vadim
+# Date 1379062344 -14400
+#      Fri Sep 13 12:52:24 2013 +0400
+# Node ID a6994940a6442b3a8eeb50eb01e5c52d9df3fd96
+# Parent  9428ea5293bee1fa63c7ea0462f9765714570800
+8023057: Enhance start up image display
+Reviewed-by: anthony, serb, mschoene
+
+diff -Nru openjdk/jdk/src/share/native/sun/awt/splashscreen/splashscreen_impl.c openjdk/jdk/src/share/native/sun/awt/splashscreen/splashscreen_impl.c
+--- openjdk/jdk/src/share/native/sun/awt/splashscreen/splashscreen_impl.c
++++ openjdk/jdk/src/share/native/sun/awt/splashscreen/splashscreen_impl.c
+@@ -111,8 +111,9 @@
+ int
+ SplashIsStillLooping(Splash * splash)
+ {
+-    if (splash->currentFrame < 0)
++    if (splash->currentFrame < 0) {
+         return 0;
++    }
+     return splash->loopCount != 1 ||
+         splash->currentFrame + 1 < splash->frameCount;
+ }
+@@ -121,17 +122,22 @@
+ SplashUpdateScreenData(Splash * splash)
+ {
+     ImageRect srcRect, dstRect;
++    if (splash->currentFrame < 0) {
++        return;
++    }
+ 
+     initRect(&srcRect, 0, 0, splash->width, splash->height, 1,
+         splash->width * sizeof(rgbquad_t),
+         splash->frames[splash->currentFrame].bitmapBits, &splash->imageFormat);
+-    if (splash->screenData)
++    if (splash->screenData) {
+         free(splash->screenData);
++    }
+     splash->screenStride = splash->width * splash->screenFormat.depthBytes;
+-    if (splash->byteAlignment > 1)
++    if (splash->byteAlignment > 1) {
+         splash->screenStride =
+             (splash->screenStride + splash->byteAlignment - 1) &
+             ~(splash->byteAlignment - 1);
++    }
+     splash->screenData = malloc(splash->height * splash->screenStride);
+     initRect(&dstRect, 0, 0, splash->width, splash->height, 1,
+         splash->screenStride, splash->screenData, &splash->screenFormat);
+@@ -146,16 +152,19 @@
+ void
+ SplashNextFrame(Splash * splash)
+ {
+-    if (splash->currentFrame < 0)
++    if (splash->currentFrame < 0) {
+         return;
++    }
+     do {
+-        if (!SplashIsStillLooping(splash))
++        if (!SplashIsStillLooping(splash)) {
+             return;
++        }
+         splash->time += splash->frames[splash->currentFrame].delay;
+         if (++splash->currentFrame >= splash->frameCount) {
+             splash->currentFrame = 0;
+-            if (splash->loopCount > 0)
++            if (splash->loopCount > 0) {
+                 splash->loopCount--;
++            }
+         }
+     } while (splash->time + splash->frames[splash->currentFrame].delay -
+         SplashTime() <= 0);
+@@ -183,8 +192,9 @@
+                 pSrc += pSrcRect->depthBytes;
+                 ++i;
+             }
+-            if (i >= pSrcRect->numSamples)
++            if (i >= pSrcRect->numSamples) {
+                 break;
++            }
+             i0 = i;
+             while (i < pSrcRect->numSamples &&
+                    getRGBA(pSrc, pSrcRect->format) >= ALPHA_THRESHOLD) {
+diff -Nru openjdk/jdk/src/solaris/native/sun/awt/splashscreen/splashscreen_sys.c openjdk/jdk/src/solaris/native/sun/awt/splashscreen/splashscreen_sys.c
+--- openjdk/jdk/src/solaris/native/sun/awt/splashscreen/splashscreen_sys.c
++++ openjdk/jdk/src/solaris/native/sun/awt/splashscreen/splashscreen_sys.c
+@@ -557,8 +557,8 @@
+         SplashUnlock(splash);
+         rc = select(n, fds, NULL, NULL, ptv);
+         SplashLock(splash);
+-        if (splash->isVisible>0 && SplashTime() >= splash->time +
+-                splash->frames[splash->currentFrame].delay) {
++        if (splash->isVisible > 0 && splash->currentFrame >= 0 &&
++                SplashTime() >= splash->time + splash->frames[splash->currentFrame].delay) {
+             SplashNextFrame(splash);
+             SplashUpdateShape(splash);
+             SplashRedrawWindow(splash);

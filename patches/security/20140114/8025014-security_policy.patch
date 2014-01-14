@@ -1,0 +1,185 @@
+# HG changeset patch
+# User weijun
+# Date 1381975122 -28800
+#      Thu Oct 17 09:58:42 2013 +0800
+# Node ID 1e92cb43dce5042f47d8500057396ff48ab4e143
+# Parent  e82fe533fa3135e25baedef06dec60324a44229b
+8025014: Enhance Security Policy
+6727821: Enhance JAAS Configuration
+Reviewed-by: xuelei, hawtin
+
+diff -Nru openjdk/jdk/src/share/classes/javax/security/auth/Policy.java openjdk/jdk/src/share/classes/javax/security/auth/Policy.java
+--- openjdk/jdk/src/share/classes/javax/security/auth/Policy.java
++++ openjdk/jdk/src/share/classes/javax/security/auth/Policy.java
+@@ -26,6 +26,9 @@
+ package javax.security.auth;
+ 
+ import java.security.Security;
++import java.security.AccessController;
++import java.security.PrivilegedAction;
++import java.security.PrivilegedExceptionAction;
+ import sun.security.util.Debug;
+ 
+ /**
+@@ -160,21 +163,14 @@
+ public abstract class Policy {
+ 
+     private static Policy policy;
+-    private static ClassLoader contextClassLoader;
++
++    private final java.security.AccessControlContext acc =
++            java.security.AccessController.getContext();
+ 
+     // true if a custom (not com.sun.security.auth.PolicyFile) system-wide
+     // policy object is set
+     private static boolean isCustomPolicy;
+ 
+-    static {
+-        contextClassLoader = java.security.AccessController.doPrivileged
+-                (new java.security.PrivilegedAction<ClassLoader>() {
+-                public ClassLoader run() {
+-                    return Thread.currentThread().getContextClassLoader();
+-                }
+-        });
+-    };
+-
+     /**
+      * Sole constructor.  (For invocation by subclass constructors, typically
+      * implicit.)
+@@ -217,8 +213,8 @@
+ 
+                 if (policy == null) {
+                     String policy_class = null;
+-                    policy_class = java.security.AccessController.doPrivileged
+-                        (new java.security.PrivilegedAction<String>() {
++                    policy_class = AccessController.doPrivileged
++                        (new PrivilegedAction<String>() {
+                         public String run() {
+                             return java.security.Security.getProperty
+                                 ("auth.policy.provider");
+@@ -230,19 +226,31 @@
+ 
+                     try {
+                         final String finalClass = policy_class;
+-                        policy = java.security.AccessController.doPrivileged
+-                            (new java.security.PrivilegedExceptionAction<Policy>() {
+-                            public Policy run() throws ClassNotFoundException,
+-                                                InstantiationException,
+-                                                IllegalAccessException {
+-                                return (Policy) Class.forName
+-                                        (finalClass,
+-                                        true,
+-                                        contextClassLoader).newInstance();
+-                            }
+-                        });
+-                        isCustomPolicy =
+-                            !finalClass.equals("com.sun.security.auth.PolicyFile");
++                        final Policy untrustedImpl = AccessController.doPrivileged(
++                                new PrivilegedExceptionAction<Policy>() {
++                                    public Policy run() throws ClassNotFoundException,
++                                            InstantiationException,
++                                            IllegalAccessException {
++                                        Class<? extends Policy> implClass = Class.forName(
++                                                finalClass, false,
++                                                Thread.currentThread().getContextClassLoader()
++                                        ).asSubclass(Policy.class);
++                                        return implClass.newInstance();
++                                    }
++                                });
++                        if (untrustedImpl.acc == null) {
++                            throw new NullPointerException();
++                        }
++                        AccessController.doPrivileged(
++                                new PrivilegedExceptionAction<Void>() {
++                                    public Void run() {
++                                        setPolicy(untrustedImpl);
++                                        isCustomPolicy =
++                                            !finalClass.equals("com.sun.security.auth.PolicyFile");
++                                        return null;
++                                    }
++                                }, untrustedImpl.acc
++                        );
+                     } catch (Exception e) {
+                         throw new SecurityException
+                                 (sun.security.util.ResourcesMgr.getString
+diff -Nru openjdk/jdk/src/share/classes/javax/security/auth/login/Configuration.java openjdk/jdk/src/share/classes/javax/security/auth/login/Configuration.java
+--- openjdk/jdk/src/share/classes/javax/security/auth/login/Configuration.java
++++ openjdk/jdk/src/share/classes/javax/security/auth/login/Configuration.java
+@@ -27,9 +27,6 @@
+ 
+ import javax.security.auth.AuthPermission;
+ 
+-import java.io.*;
+-import java.util.*;
+-import java.net.URI;
+ import java.security.AccessController;
+ import java.security.PrivilegedAction;
+ import java.security.PrivilegedExceptionAction;
+@@ -38,7 +35,6 @@
+ import java.security.NoSuchProviderException;
+ import java.security.Provider;
+ import java.security.Security;
+-import java.security.SecurityPermission;
+ 
+ import sun.security.jca.GetInstance;
+ 
+@@ -194,16 +190,9 @@
+ public abstract class Configuration {
+ 
+     private static Configuration configuration;
+-    private static ClassLoader contextClassLoader;
+ 
+-    static {
+-        contextClassLoader = AccessController.doPrivileged
+-                (new PrivilegedAction<ClassLoader>() {
+-                public ClassLoader run() {
+-                    return Thread.currentThread().getContextClassLoader();
+-                }
+-        });
+-    };
++    private final java.security.AccessControlContext acc =
++            java.security.AccessController.getContext();
+ 
+     private static void checkPermission(String type) {
+         SecurityManager sm = System.getSecurityManager();
+@@ -256,17 +245,29 @@
+ 
+                 try {
+                     final String finalClass = config_class;
+-                    configuration = AccessController.doPrivileged
+-                        (new PrivilegedExceptionAction<Configuration>() {
+-                        public Configuration run() throws ClassNotFoundException,
+-                                            InstantiationException,
+-                                            IllegalAccessException {
+-                            return (Configuration)Class.forName
+-                                    (finalClass,
+-                                    true,
+-                                    contextClassLoader).newInstance();
+-                        }
+-                    });
++                    final Configuration untrustedImpl = AccessController.doPrivileged(
++                            new PrivilegedExceptionAction<Configuration>() {
++                                public Configuration run() throws ClassNotFoundException,
++                                        InstantiationException,
++                                        IllegalAccessException {
++                                    Class<? extends Configuration> implClass = Class.forName(
++                                            finalClass, false,
++                                            Thread.currentThread().getContextClassLoader()
++                                    ).asSubclass(Configuration.class);
++                                    return implClass.newInstance();
++                                }
++                            });
++                    if (untrustedImpl.acc == null) {
++                        throw new NullPointerException();
++                    }
++                    AccessController.doPrivileged(
++                            new PrivilegedExceptionAction<Void>() {
++                                public Void run() {
++                                    setConfiguration(untrustedImpl);
++                                    return null;
++                                }
++                            }, untrustedImpl.acc
++                    );
+                 } catch (PrivilegedActionException e) {
+                     Exception ee = e.getException();
+                     if (ee instanceof InstantiationException) {

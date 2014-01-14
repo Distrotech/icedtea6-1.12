@@ -1,0 +1,31 @@
+# HG changeset patch
+# User malenkov
+# Date 1380901199 -14400
+#      Fri Oct 04 19:39:59 2013 +0400
+# Node ID e78f7f39740968bdc1f8f86bd5ab08dce06d8370
+# Parent  8ddfc847b88227282606279c3ae76089fb0efae5
+8025448: Enhance listening events
+Reviewed-by: art, skoivu
+
+diff -Nru openjdk/jdk/src/share/classes/javax/swing/event/EventListenerList.java openjdk/jdk/src/share/classes/javax/swing/event/EventListenerList.java
+--- openjdk/jdk/src/share/classes/javax/swing/event/EventListenerList.java
++++ openjdk/jdk/src/share/classes/javax/swing/event/EventListenerList.java
+@@ -27,6 +27,7 @@
+ import java.io.*;
+ import java.util.*;
+ import java.lang.reflect.Array;
++import sun.reflect.misc.ReflectUtil;
+ 
+ /**
+  * A class that holds a list of EventListeners.  A single instance
+@@ -270,7 +271,9 @@
+         while (null != (listenerTypeOrNull = s.readObject())) {
+             ClassLoader cl = Thread.currentThread().getContextClassLoader();
+             EventListener l = (EventListener)s.readObject();
+-            add((Class<EventListener>)Class.forName((String)listenerTypeOrNull, true, cl), l);
++            String name = (String) listenerTypeOrNull;
++            ReflectUtil.checkPackageAccess(name);
++            add((Class<EventListener>)Class.forName(name, true, cl), l);
+         }
+     }
+ 

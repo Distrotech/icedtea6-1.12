@@ -1,0 +1,163 @@
+# HG changeset patch
+# User joehw
+# Date 1377574776 25200
+#      Mon Aug 26 20:39:36 2013 -0700
+# Node ID 5411e32abf0cf41f4358be4ef3ae4e54c9404506
+# Parent  f7f424a947646639e12b45d7dba17018b52e790d
+8022935: Enhance Apache resolver classes
+Reviewed-by: alanb, mchung, skoivu
+
+diff -Nru openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/CatalogManager.java openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/CatalogManager.java
+--- openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/CatalogManager.java
++++ openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/CatalogManager.java
+@@ -24,20 +24,17 @@
+ package com.sun.org.apache.xml.internal.resolver;
+ 
+ import com.sun.org.apache.xerces.internal.utils.SecuritySupport;
++import com.sun.org.apache.xml.internal.resolver.helpers.BootstrapResolver;
++import com.sun.org.apache.xml.internal.resolver.helpers.Debug;
+ import java.io.InputStream;
+-
++import java.net.MalformedURLException;
+ import java.net.URL;
+-import java.net.MalformedURLException;
+-
+ import java.util.MissingResourceException;
+ import java.util.PropertyResourceBundle;
+ import java.util.ResourceBundle;
+ import java.util.StringTokenizer;
+ import java.util.Vector;
+-
+-import com.sun.org.apache.xml.internal.resolver.helpers.Debug;
+-import com.sun.org.apache.xml.internal.resolver.helpers.BootstrapResolver;
+-import com.sun.org.apache.xml.internal.resolver.Catalog;
++import sun.reflect.misc.ReflectUtil;
+ 
+ /**
+  * CatalogManager provides an interface to the catalog properties.
+@@ -680,7 +677,7 @@
+           catalog = new Catalog();
+         } else {
+           try {
+-            catalog = (Catalog) Class.forName(catalogClassName).newInstance();
++            catalog = (Catalog) ReflectUtil.forName(catalogClassName).newInstance();
+           } catch (ClassNotFoundException cnfe) {
+             debug.message(1,"Catalog class named '"
+                           + catalogClassName
+diff -Nru openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/readers/DOMCatalogReader.java openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/readers/DOMCatalogReader.java
+--- openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/readers/DOMCatalogReader.java
++++ openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/readers/DOMCatalogReader.java
+@@ -23,24 +23,21 @@
+ 
+ package com.sun.org.apache.xml.internal.resolver.readers;
+ 
+-import java.util.Hashtable;
++import com.sun.org.apache.xml.internal.resolver.Catalog;
++import com.sun.org.apache.xml.internal.resolver.CatalogException;
++import com.sun.org.apache.xml.internal.resolver.helpers.Namespaces;
+ import java.io.IOException;
+ import java.io.InputStream;
++import java.net.MalformedURLException;
+ import java.net.URL;
+ import java.net.URLConnection;
+-import java.net.MalformedURLException;
+-
++import java.util.Hashtable;
++import javax.xml.parsers.DocumentBuilder;
+ import javax.xml.parsers.DocumentBuilderFactory;
+-import javax.xml.parsers.DocumentBuilder;
+ import javax.xml.parsers.ParserConfigurationException;
+-
+-import com.sun.org.apache.xml.internal.resolver.Catalog;
+-import com.sun.org.apache.xml.internal.resolver.CatalogException;
+-import com.sun.org.apache.xml.internal.resolver.readers.CatalogReader;
+-import com.sun.org.apache.xml.internal.resolver.helpers.Namespaces;
+-
++import org.w3c.dom.*;
+ import org.xml.sax.SAXException;
+-import org.w3c.dom.*;
++import sun.reflect.misc.ReflectUtil;
+ 
+ /**
+  * A DOM-based CatalogReader.
+@@ -199,7 +196,7 @@
+     DOMCatalogParser domParser = null;
+ 
+     try {
+-      domParser = (DOMCatalogParser) Class.forName(domParserClass).newInstance();
++      domParser = (DOMCatalogParser) ReflectUtil.forName(domParserClass).newInstance();
+     } catch (ClassNotFoundException cnfe) {
+       catalog.getCatalogManager().debug.message(1, "Cannot load XML Catalog Parser class", domParserClass);
+       throw new CatalogException(CatalogException.UNPARSEABLE);
+diff -Nru openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/readers/SAXCatalogReader.java openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/readers/SAXCatalogReader.java
+--- openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/readers/SAXCatalogReader.java
++++ openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xml/internal/resolver/readers/SAXCatalogReader.java
+@@ -23,19 +23,21 @@
+ 
+ package com.sun.org.apache.xml.internal.resolver.readers;
+ 
+-import java.util.Hashtable;
++import com.sun.org.apache.xml.internal.resolver.Catalog;
++import com.sun.org.apache.xml.internal.resolver.CatalogException;
++import com.sun.org.apache.xml.internal.resolver.CatalogManager;
++import com.sun.org.apache.xml.internal.resolver.helpers.Debug;
++import java.io.FileNotFoundException;
+ import java.io.IOException;
+-import java.io.FileNotFoundException;
+ import java.io.InputStream;
++import java.net.MalformedURLException;
+ import java.net.URL;
+ import java.net.URLConnection;
+-import java.net.MalformedURLException;
+ import java.net.UnknownHostException;
+-
++import java.util.Hashtable;
+ import javax.xml.parsers.ParserConfigurationException;
++import javax.xml.parsers.SAXParser;
+ import javax.xml.parsers.SAXParserFactory;
+-import javax.xml.parsers.SAXParser;
+-
+ import org.xml.sax.AttributeList;
+ import org.xml.sax.Attributes;
+ import org.xml.sax.ContentHandler;
+@@ -45,12 +47,7 @@
+ import org.xml.sax.Locator;
+ import org.xml.sax.Parser;
+ import org.xml.sax.SAXException;
+-
+-import com.sun.org.apache.xml.internal.resolver.Catalog;
+-import com.sun.org.apache.xml.internal.resolver.CatalogManager;
+-import com.sun.org.apache.xml.internal.resolver.CatalogException;
+-import com.sun.org.apache.xml.internal.resolver.readers.CatalogReader;
+-import com.sun.org.apache.xml.internal.resolver.helpers.Debug;
++import sun.reflect.misc.ReflectUtil;
+ 
+ /**
+  * A SAX-based CatalogReader.
+@@ -246,7 +243,7 @@
+         }
+         parser.parse(new InputSource(is), spHandler);
+       } else {
+-        Parser parser = (Parser) Class.forName(parserClass).newInstance();
++        Parser parser = (Parser) ReflectUtil.forName(parserClass).newInstance();
+         parser.setDocumentHandler(this);
+         if (bResolver != null) {
+           parser.setEntityResolver(bResolver);
+@@ -352,7 +349,7 @@
+ 
+       try {
+         saxParser = (SAXCatalogParser)
+-          Class.forName(saxParserClass).newInstance();
++          ReflectUtil.forName(saxParserClass).newInstance();
+ 
+         saxParser.setCatalog(catalog);
+         saxParser.startDocument();
+@@ -413,7 +410,7 @@
+ 
+       try {
+         saxParser = (SAXCatalogParser)
+-          Class.forName(saxParserClass).newInstance();
++          ReflectUtil.forName(saxParserClass).newInstance();
+ 
+         saxParser.setCatalog(catalog);
+         saxParser.startDocument();

@@ -1,0 +1,58 @@
+# HG changeset patch
+# User joehw
+# Date 1382471973 25200
+#      Tue Oct 22 12:59:33 2013 -0700
+# Node ID 1502dbf19fe21111593ee0d88f262d0cfd9b359a
+# Parent  5411e32abf0cf41f4358be4ef3ae4e54c9404506
+8025018: Enhance JAX-P set up
+Reviewed-by: alanb, dfuchs, lancea, ahgross
+
+diff -Nru openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xalan/internal/lib/ExsltStrings.java openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xalan/internal/lib/ExsltStrings.java
+--- openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xalan/internal/lib/ExsltStrings.java
++++ openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xalan/internal/lib/ExsltStrings.java
+@@ -52,6 +52,8 @@
+  */
+ public class ExsltStrings extends ExsltBase
+ {
++   static final String JDK_DEFAULT_DOM = "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl";
++
+   /**
+    * The str:align function aligns a string within another string.
+    * <p>
+@@ -343,7 +345,11 @@
+         static {
+             try
+             {
+-                m_doc =DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
++                if (System.getSecurityManager() == null) {
++                    m_doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
++                } else {
++                    m_doc = DocumentBuilderFactory.newInstance(JDK_DEFAULT_DOM, null).newDocumentBuilder().newDocument();
++                }
+             }
+ 
+             catch(ParserConfigurationException pce)
+diff -Nru openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xalan/internal/lib/Extensions.java openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xalan/internal/lib/Extensions.java
+--- openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xalan/internal/lib/Extensions.java
++++ openjdk/jaxp/drop_included/jaxp_src/src/com/sun/org/apache/xalan/internal/lib/Extensions.java
+@@ -55,6 +55,7 @@
+  */
+ public class Extensions
+ {
++    static final String JDK_DEFAULT_DOM = "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl";
+   /**
+    * Constructor Extensions
+    *
+@@ -407,7 +408,11 @@
+         {
+             try
+             {
+-                m_doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
++                if (System.getSecurityManager() == null) {
++                    m_doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
++                } else {
++                    m_doc = DocumentBuilderFactory.newInstance(JDK_DEFAULT_DOM, null).newDocumentBuilder().newDocument();
++                }
+             }
+ 
+             catch(ParserConfigurationException pce)

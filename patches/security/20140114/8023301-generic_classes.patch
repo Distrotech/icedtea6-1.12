@@ -1,0 +1,125 @@
+# HG changeset patch
+# User jfranck
+# Date 1381483341 -7200
+#      Fri Oct 11 11:22:21 2013 +0200
+# Node ID 0130075b454ced66b4c2f557f84c4253f8052de2
+# Parent  a6994940a6442b3a8eeb50eb01e5c52d9df3fd96
+8023301: Enhance generic classes
+Reviewed-by: mchung, hawtin
+
+diff -Nru openjdk/jdk/src/share/classes/sun/reflect/generics/reflectiveObjects/TypeVariableImpl.java openjdk/jdk/src/share/classes/sun/reflect/generics/reflectiveObjects/TypeVariableImpl.java
+--- openjdk/jdk/src/share/classes/sun/reflect/generics/reflectiveObjects/TypeVariableImpl.java
++++ openjdk/jdk/src/share/classes/sun/reflect/generics/reflectiveObjects/TypeVariableImpl.java
+@@ -25,13 +25,17 @@
+ 
+ package sun.reflect.generics.reflectiveObjects;
+ 
++import java.lang.reflect.Constructor;
+ import java.lang.reflect.GenericDeclaration;
++import java.lang.reflect.Member;
++import java.lang.reflect.Method;
+ import java.lang.reflect.Type;
+ import java.lang.reflect.TypeVariable;
+ 
+ import sun.reflect.generics.factory.GenericsFactory;
+ import sun.reflect.generics.tree.FieldTypeSignature;
+ import sun.reflect.generics.visitor.Reifier;
++import sun.reflect.misc.ReflectUtil;
+ 
+ /**
+  * Implementation of <tt>java.lang.reflect.TypeVariable</tt> interface
+@@ -87,6 +91,13 @@
+                              TypeVariableImpl<T> make(T decl, String name,
+                                                       FieldTypeSignature[] bs,
+                                                       GenericsFactory f) {
++
++        if (!((decl instanceof Class) ||
++                (decl instanceof Method) ||
++                (decl instanceof Constructor))) {
++            throw new AssertionError("Unexpected kind of GenericDeclaration" +
++                    decl.getClass().toString());
++        }
+         return new TypeVariableImpl<T>(decl, name, bs, f);
+     }
+ 
+@@ -141,6 +152,13 @@
+      * @since 1.5
+      */
+     public D getGenericDeclaration(){
++        if (genericDeclaration instanceof Class)
++            ReflectUtil.checkPackageAccess((Class)genericDeclaration);
++        else if ((genericDeclaration instanceof Method) ||
++                (genericDeclaration instanceof Constructor))
++            ReflectUtil.conservativeCheckMemberAccess((Member)genericDeclaration);
++        else
++            throw new AssertionError("Unexpected kind of GenericDeclaration");
+         return genericDeclaration;
+     }
+ 
+@@ -156,7 +174,8 @@
+ 
+     @Override
+     public boolean equals(Object o) {
+-        if (o instanceof TypeVariable) {
++        if (o instanceof TypeVariable &&
++                o.getClass() == TypeVariableImpl.class) {
+             TypeVariable that = (TypeVariable) o;
+ 
+             GenericDeclaration thatDecl = that.getGenericDeclaration();
+diff -Nru openjdk/jdk/src/share/classes/sun/reflect/misc/ReflectUtil.java openjdk/jdk/src/share/classes/sun/reflect/misc/ReflectUtil.java
+--- openjdk/jdk/src/share/classes/sun/reflect/misc/ReflectUtil.java
++++ openjdk/jdk/src/share/classes/sun/reflect/misc/ReflectUtil.java
+@@ -26,11 +26,13 @@
+ 
+ package sun.reflect.misc;
+ 
++import java.lang.reflect.Member;
+ import java.lang.reflect.Method;
+ import java.lang.reflect.Modifier;
+ import java.lang.reflect.Proxy;
+ import java.util.Arrays;
+ import sun.reflect.Reflection;
++import sun.security.util.SecurityConstants;
+ 
+ public final class ReflectUtil {
+ 
+@@ -125,6 +127,39 @@
+         return false;
+     }
+ 
++    /**
++     * Does a conservative approximation of member access check. Use this if
++     * you don't have an actual 'userland' caller Class/ClassLoader available.
++     * This might be more restrictive than a precise member access check where
++     * you have a caller, but should never allow a member access that is
++     * forbidden.
++     *
++     * @param m the {@code Member} about to be accessed
++     */
++    public static void conservativeCheckMemberAccess(Member m) throws SecurityException{
++        final SecurityManager sm = System.getSecurityManager();
++        if (sm == null)
++            return;
++
++        // Check for package access on the declaring class.
++        //
++        // In addition, unless the member and the declaring class are both
++        // public check for access declared member permissions.
++        //
++        // This is done regardless of ClassLoader relations between the {@code
++        // Member m} and any potential caller.
++
++        final Class<?> declaringClass = m.getDeclaringClass();
++
++        checkPackageAccess(declaringClass);
++
++        if (Modifier.isPublic(m.getModifiers()) &&
++                Modifier.isPublic(declaringClass.getModifiers()))
++            return;
++
++        // Check for declared member access.
++        sm.checkPermission(SecurityConstants.CHECK_MEMBER_ACCESS_PERMISSION);
++    }
+ 
+     /**
+      * Checks package access on the given class.

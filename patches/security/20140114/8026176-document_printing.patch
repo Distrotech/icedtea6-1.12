@@ -1,0 +1,24 @@
+# HG changeset patch
+# User prr
+# Date 1381862078 25200
+#      Tue Oct 15 11:34:38 2013 -0700
+# Node ID 67935d4cb42df261b41e8d1709fead4715bd8692
+# Parent  e78f7f39740968bdc1f8f86bd5ab08dce06d8370
+8026176: Enhance document printing
+Reviewed-by: bae, jgodinez
+
+diff -Nru openjdk/jdk/src/share/classes/javax/print/SimpleDoc.java openjdk/jdk/src/share/classes/javax/print/SimpleDoc.java
+--- openjdk/jdk/src/share/classes/javax/print/SimpleDoc.java
++++ openjdk/jdk/src/share/classes/javax/print/SimpleDoc.java
+@@ -91,7 +91,10 @@
+ 
+        Class repClass = null;
+        try {
+-            repClass = Class.forName(flavor.getRepresentationClassName());
++            String className = flavor.getRepresentationClassName();
++            sun.reflect.misc.ReflectUtil.checkPackageAccess(className);
++            repClass = Class.forName(className, false,
++                              Thread.currentThread().getContextClassLoader());
+        } catch (Throwable e) {
+            throw new IllegalArgumentException("unknown representation class");
+        }

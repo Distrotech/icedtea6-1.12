@@ -1,0 +1,24 @@
+# HG changeset patch
+# User weijun
+# Date 1379056651 -28800
+#      Fri Sep 13 15:17:31 2013 +0800
+# Node ID d2fd1283e0b7b978e47ae797731291bf09ba81d7
+# Parent  c12624b110764c74f7dcc1e9ad3b6f313484157c
+8024306: Enhance Subject consistency
+Summary: Also reviewed by Alexander Fomin
+Reviewed-by: mullan, ahgross
+
+diff -Nru openjdk/jdk/src/share/classes/javax/security/auth/Subject.java openjdk/jdk/src/share/classes/javax/security/auth/Subject.java
+--- openjdk/jdk/src/share/classes/javax/security/auth/Subject.java
++++ openjdk/jdk/src/share/classes/javax/security/auth/Subject.java
+@@ -947,6 +947,10 @@
+ 
+         s.defaultReadObject();
+ 
++        // Rewrap the principals into a SecureSet
++        principals = Collections.synchronizedSet(new SecureSet<Principal>
++                                (this, PRINCIPAL_SET, principals));
++
+         // The Credential <code>Set</code> is not serialized, but we do not
+         // want the default deserialization routine to set it to null.
+         this.pubCredentials = Collections.synchronizedSet

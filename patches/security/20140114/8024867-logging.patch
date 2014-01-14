@@ -1,0 +1,44 @@
+# HG changeset patch
+# User dfuchs
+# Date 1381140562 -7200
+#      Mon Oct 07 12:09:22 2013 +0200
+# Node ID 8ddfc847b88227282606279c3ae76089fb0efae5
+# Parent  16e444c32915fcf9ec46b2c15d455c220ddc9085
+8024867: Enhance logging start up
+Reviewed-by: mchung, hawtin
+
+diff -Nru openjdk/jdk/src/share/classes/java/util/logging/LogManager.java openjdk/jdk/src/share/classes/java/util/logging/LogManager.java
+--- openjdk/jdk/src/share/classes/java/util/logging/LogManager.java
++++ openjdk/jdk/src/share/classes/java/util/logging/LogManager.java
+@@ -240,6 +240,11 @@
+      * retrieved by calling Logmanager.getLogManager.
+      */
+     protected LogManager() {
++        this(checkSubclassPermissions());
++    }
++
++    private LogManager(Void checked) {
++
+         // Add a shutdown hook to close the global handlers.
+         try {
+             Runtime.getRuntime().addShutdownHook(new Cleaner());
+@@ -249,6 +254,19 @@
+         }
+     }
+ 
++    private static Void checkSubclassPermissions() {
++        final SecurityManager sm = System.getSecurityManager();
++        if (sm != null) {
++            // These permission will be checked in the LogManager constructor,
++            // in order to register the Cleaner() thread as a shutdown hook.
++            // Check them here to avoid the penalty of constructing the object
++            // etc...
++            sm.checkPermission(new RuntimePermission("shutdownHooks"));
++            sm.checkPermission(new RuntimePermission("setContextClassLoader"));
++        }
++        return null;
++    }
++
+     /**
+      * Return the global LogManager object.
+      */

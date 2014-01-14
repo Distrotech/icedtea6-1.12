@@ -1,0 +1,738 @@
+# HG changeset patch
+# User msheppar
+# Date 1383355443 0
+#      Sat Nov 02 01:24:03 2013 +0000
+# Node ID a107c678dde3a3700ff0aa37c2cc111d43d277db
+# Parent  8662d95ebee18761895cbeacb674cdb187163f03
+8025767: Enhance IIOP Streams
+Summary: modify org.omg.CORBA_2_3.portable.InputStream inheritance structure.
+Reviewed-by: alanb, coffeys, skoivu
+
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/corba/AnyImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/corba/AnyImpl.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/corba/AnyImpl.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/corba/AnyImpl.java
+@@ -82,11 +82,18 @@
+             super((ORB)orb);
+         }
+ 
+-        public org.omg.CORBA.portable.InputStream create_input_stream()
+-        {
+-            return new AnyInputStream(
+-                (com.sun.corba.se.impl.encoding.EncapsInputStream)
+-                    super.create_input_stream());
++        public org.omg.CORBA.portable.InputStream create_input_stream() {
++            final org.omg.CORBA.portable.InputStream is = super
++                    .create_input_stream();
++            AnyInputStream aIS = AccessController
++                    .doPrivileged(new PrivilegedAction<AnyInputStream>() {
++                        @Override
++                        public AnyInputStream run() {
++                            return new AnyInputStream(
++                                    (com.sun.corba.se.impl.encoding.EncapsInputStream) is);
++                        }
++                    });
++            return aIS;
+         }
+     }
+ 
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/EncapsInputStream.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/EncapsInputStream.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/EncapsInputStream.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/EncapsInputStream.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2001, 2004, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2001, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -36,11 +36,10 @@
+ import com.sun.corba.se.impl.protocol.giopmsgheaders.Message;
+ 
+ import com.sun.corba.se.spi.orb.ORB;
+-
+ import com.sun.corba.se.spi.logging.CORBALogDomains;
+-
+ import com.sun.corba.se.impl.logging.ORBUtilSystemException;
+ 
++import sun.corba.EncapsInputStreamFactory;
+ /**
+  * Encapsulations are supposed to explicitly define their
+  * code sets and GIOP version.  The original resolution to issue 2784
+@@ -148,7 +147,7 @@
+     }
+ 
+     public CDRInputStream dup() {
+-        return new EncapsInputStream(this);
++        return EncapsInputStreamFactory.newEncapsInputStream(this);
+     }
+ 
+     protected CodeSetConversion.BTCConverter createCharBTCConverter() {
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/EncapsOutputStream.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/EncapsOutputStream.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/EncapsOutputStream.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/EncapsOutputStream.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2001, 2004, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2001, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -39,6 +39,8 @@
+ import com.sun.corba.se.impl.protocol.giopmsgheaders.Message;
+ import com.sun.corba.se.impl.orbutil.ORBConstants;
+ 
++import sun.corba.EncapsInputStreamFactory;
++
+ /**
+  * Encapsulations are supposed to explicitly define their
+  * code sets and GIOP version.  The original resolution to issue 2784
+@@ -107,11 +109,11 @@
+     public org.omg.CORBA.portable.InputStream create_input_stream() {
+         freeInternalCaches();
+ 
+-        return new EncapsInputStream(orb(),
+-                                     getByteBuffer(),
+-                                     getSize(),
+-                                     isLittleEndian(),
+-                                     getGIOPVersion());
++        return  EncapsInputStreamFactory.newEncapsInputStream(orb(),
++                getByteBuffer(),
++                getSize(),
++                isLittleEndian(),
++                getGIOPVersion());
+     }
+ 
+     protected CodeSetConversion.CTBConverter createCharCTBConverter() {
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/TypeCodeInputStream.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/TypeCodeInputStream.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/TypeCodeInputStream.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/TypeCodeInputStream.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2002, 2003, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2002, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -64,6 +64,8 @@
+ import com.sun.corba.se.impl.encoding.CDROutputStream;
+ import com.sun.corba.se.impl.encoding.MarshalInputStream;
+ 
++import sun.corba.EncapsInputStreamFactory;
++
+ public class TypeCodeInputStream extends EncapsInputStream implements TypeCodeReader
+ {
+     private Map typeMap = null;
+@@ -157,11 +159,13 @@
+ 
+         // create an encapsulation using the marshal buffer
+         if (is instanceof CDRInputStream) {
+-            encap = new TypeCodeInputStream((ORB)_orb, encapBuffer, encapBuffer.length,
+-                                            ((CDRInputStream)is).isLittleEndian(),
+-                                            ((CDRInputStream)is).getGIOPVersion());
++            encap = EncapsInputStreamFactory.newTypeCodeInputStream((ORB) _orb,
++                    encapBuffer, encapBuffer.length,
++                    ((CDRInputStream) is).isLittleEndian(),
++                    ((CDRInputStream) is).getGIOPVersion());
+         } else {
+-            encap = new TypeCodeInputStream((ORB)_orb, encapBuffer, encapBuffer.length);
++            encap = EncapsInputStreamFactory.newTypeCodeInputStream((ORB) _orb,
++                    encapBuffer, encapBuffer.length);
+         }
+         encap.setEnclosingInputStream(is);
+         encap.makeEncapsulation();
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/TypeCodeOutputStream.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/TypeCodeOutputStream.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/TypeCodeOutputStream.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/encoding/TypeCodeOutputStream.java
+@@ -61,6 +61,8 @@
+ import java.math.BigInteger;
+ import java.nio.ByteBuffer;
+ 
++import sun.corba.EncapsInputStreamFactory;
++
+ public final class TypeCodeOutputStream extends EncapsOutputStream
+ {
+     private OutputStream enclosure = null;
+@@ -77,9 +79,9 @@
+ 
+     public org.omg.CORBA.portable.InputStream create_input_stream()
+     {
+-        //return new TypeCodeInputStream((ORB)orb(), getByteBuffer(), getIndex(), isLittleEndian());
+-        TypeCodeInputStream tcis
+-            = new TypeCodeInputStream((ORB)orb(), getByteBuffer(), getIndex(), isLittleEndian(), getGIOPVersion());
++        TypeCodeInputStream tcis = EncapsInputStreamFactory
++                .newTypeCodeInputStream((ORB) orb(), getByteBuffer(),
++                        getIndex(), isLittleEndian(), getGIOPVersion());
+         //if (TypeCodeImpl.debug) {
+             //System.out.println("Created TypeCodeInputStream " + tcis + " with no parent");
+             //tcis.printBuffer();
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/CDREncapsCodec.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/CDREncapsCodec.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/CDREncapsCodec.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/interceptors/CDREncapsCodec.java
+@@ -33,6 +33,8 @@
+ import com.sun.corba.se.spi.ior.iiop.GIOPVersion;
+ import com.sun.corba.se.spi.logging.CORBALogDomains;
+ 
++import sun.corba.EncapsInputStreamFactory;
++
+ import com.sun.corba.se.impl.corba.AnyImpl;
+ import com.sun.corba.se.impl.encoding.EncapsInputStream;
+ import com.sun.corba.se.impl.encoding.EncapsOutputStream;
+@@ -193,8 +195,9 @@
+         // it is turned into a FormatMismatch exception.
+ 
+         try {
+-            EncapsInputStream cdrIn = new EncapsInputStream( orb, data,
+-                data.length, giopVersion );
++            EncapsInputStream cdrIn = EncapsInputStreamFactory.newEncapsInputStream( orb, data,
++                    data.length, giopVersion );
++
+ 
+             cdrIn.consumeEndian();
+ 
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/io/IIOPInputStream.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/io/IIOPInputStream.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/io/IIOPInputStream.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/io/IIOPInputStream.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 1998, 2011, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -370,7 +370,7 @@
+      * @exception IOException Any of the usual Input/Output related exceptions.
+      * @since     JDK1.1
+      */
+-    public final Object readObjectDelegate() throws IOException
++    public final synchronized Object readObjectDelegate() throws IOException
+     {
+         try {
+ 
+@@ -389,7 +389,7 @@
+             }
+     }
+ 
+-    final Object simpleReadObject(Class clz,
++    final synchronized Object simpleReadObject(Class clz,
+                                   String repositoryID,
+                                   com.sun.org.omg.SendingContext.CodeBase sender,
+                                   int offset)
+@@ -461,7 +461,7 @@
+         return obj;
+     }
+ 
+-    public final void simpleSkipObject(String repositoryID,
++    public final synchronized  void simpleSkipObject(String repositoryID,
+                                        com.sun.org.omg.SendingContext.CodeBase sender)
+                                        /* throws OptionalDataException, ClassNotFoundException, IOException */
+     {
+@@ -559,7 +559,7 @@
+      *              objects.
+      * @since     JDK1.1
+      */
+-    public final void defaultReadObjectDelegate()
++    final synchronized void defaultReadObjectDelegate()
+     /* throws IOException, ClassNotFoundException, NotActiveException */
+     {
+         try {
+@@ -988,7 +988,7 @@
+         }
+     }
+ 
+-    private Object inputObject(Class clz,
++    private synchronized Object inputObject(Class clz,
+                                String repositoryID,
+                                com.sun.org.omg.SendingContext.CodeBase sender,
+                                int offset)
+@@ -1313,7 +1313,7 @@
+      * a form of custom marshaling.
+      *
+      */
+-    private Object inputObjectUsingFVD(Class clz,
++    private synchronized Object inputObjectUsingFVD(Class clz,
+                                        String repositoryID,
+                                        com.sun.org.omg.SendingContext.CodeBase sender,
+                                        int offset)
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/io/InputStreamHook.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/io/InputStreamHook.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/io/InputStreamHook.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/io/InputStreamHook.java
+@@ -201,7 +201,7 @@
+         readObjectState.endDefaultReadObject(this);
+     }
+ 
+-    public abstract void defaultReadObjectDelegate();
++    abstract void defaultReadObjectDelegate();
+ 
+     abstract void readFields(java.util.Map fieldToValueMap)
+         throws java.io.InvalidClassException, java.io.StreamCorruptedException,
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/EncapsulationUtility.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/EncapsulationUtility.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/EncapsulationUtility.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/EncapsulationUtility.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2000, 2003, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -47,6 +47,8 @@
+ import com.sun.corba.se.impl.encoding.EncapsOutputStream ;
+ import com.sun.corba.se.impl.encoding.EncapsInputStream ;
+ 
++import sun.corba.EncapsInputStreamFactory;
++
+ /**
+  * This static utility class contains various utility methods for reading and
+  * writing CDR encapsulations.
+@@ -108,8 +110,8 @@
+     static public InputStream getEncapsulationStream( InputStream is )
+     {
+         byte[] data = readOctets( is ) ;
+-        EncapsInputStream result = new EncapsInputStream( is.orb(), data,
+-            data.length ) ;
++        EncapsInputStream result = EncapsInputStreamFactory.newEncapsInputStream( is.orb(), data,
++                data.length ) ;
+         result.consumeEndian() ;
+         return result ;
+     }
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/ObjectKeyFactoryImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/ObjectKeyFactoryImpl.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/ObjectKeyFactoryImpl.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/ObjectKeyFactoryImpl.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2000, 2003, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -49,6 +49,8 @@
+ import com.sun.corba.se.impl.logging.IORSystemException ;
+ 
+ import com.sun.corba.se.impl.encoding.EncapsInputStream ;
++import sun.corba.EncapsInputStreamFactory;
++
+ 
+ /** Based on the magic and scid, return the appropriate
+ * ObjectKeyTemplate.  Expects to be called with a valid
+@@ -217,7 +219,7 @@
+     public ObjectKey create( byte[] key )
+     {
+         OctetSeqHolder osh = new OctetSeqHolder() ;
+-        EncapsInputStream is = new EncapsInputStream( orb, key, key.length ) ;
++        EncapsInputStream is = EncapsInputStreamFactory.newEncapsInputStream( orb, key, key.length );
+ 
+         ObjectKeyTemplate oktemp = create( is, fullKey, osh ) ;
+         if (oktemp == null)
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/iiop/IIOPProfileImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/iiop/IIOPProfileImpl.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/iiop/IIOPProfileImpl.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/ior/iiop/IIOPProfileImpl.java
+@@ -70,6 +70,8 @@
+ import com.sun.corba.se.impl.encoding.EncapsInputStream ;
+ import com.sun.corba.se.impl.encoding.EncapsOutputStream ;
+ 
++import sun.corba.EncapsInputStreamFactory;
++
+ import com.sun.corba.se.impl.util.JDKBridge;
+ 
+ import com.sun.corba.se.impl.logging.IORSystemException;
+@@ -170,8 +172,8 @@
+             throw wrapper.invalidTaggedProfile() ;
+         }
+ 
+-        EncapsInputStream istr = new EncapsInputStream((ORB)orb, profile.profile_data,
+-            profile.profile_data.length);
++        EncapsInputStream istr = EncapsInputStreamFactory.newEncapsInputStream((ORB)orb, profile.profile_data,
++                profile.profile_data.length);
+         istr.consumeEndian();
+         init( istr ) ;
+     }
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaClientRequestDispatcherImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaClientRequestDispatcherImpl.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaClientRequestDispatcherImpl.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/CorbaClientRequestDispatcherImpl.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2001, 2004, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2001, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -112,6 +112,7 @@
+ import com.sun.corba.se.impl.protocol.giopmsgheaders.ReferenceAddr;
+ import com.sun.corba.se.impl.transport.CorbaContactInfoListIteratorImpl;
+ import com.sun.corba.se.impl.util.JDKBridge;
++import sun.corba.EncapsInputStreamFactory;
+ 
+ /**
+  * ClientDelegate is the RMI client-side subcontract or representation
+@@ -805,8 +806,8 @@
+         }
+         byte[] data = ((UnknownServiceContext)sc).getData();
+         EncapsInputStream in =
+-            new EncapsInputStream((ORB)messageMediator.getBroker(),
+-                                  data, data.length);
++                EncapsInputStreamFactory.newEncapsInputStream((ORB)messageMediator.getBroker(),
++                                      data, data.length);
+         in.consumeEndian();
+ 
+         String msg =
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/SharedCDRClientRequestDispatcherImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/SharedCDRClientRequestDispatcherImpl.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/SharedCDRClientRequestDispatcherImpl.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/protocol/SharedCDRClientRequestDispatcherImpl.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2003, 2004, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -36,7 +36,8 @@
+ import java.util.Iterator;
+ import java.rmi.RemoteException;
+ import java.nio.ByteBuffer;
+-
++import java.security.AccessController;
++import java.security.PrivilegedAction;
+ import javax.rmi.CORBA.Util;
+ import javax.rmi.CORBA.Tie;
+ 
+@@ -111,6 +112,7 @@
+ import com.sun.corba.se.impl.protocol.giopmsgheaders.ProfileAddr;
+ import com.sun.corba.se.impl.protocol.giopmsgheaders.ReferenceAddr;
+ import com.sun.corba.se.impl.transport.CorbaContactInfoListIteratorImpl;
++import com.sun.corba.se.impl.protocol.giopmsgheaders.Message;
+ import com.sun.corba.se.impl.util.JDKBridge;
+ 
+ /**
+@@ -156,10 +158,17 @@
+ 
+         ByteBufferWithInfo bbwi = cdrOutputObject.getByteBufferWithInfo();
+         cdrOutputObject.getMessageHeader().setSize(bbwi.byteBuffer, bbwi.getSize());
+-
+-        CDRInputObject cdrInputObject =
+-            new CDRInputObject(orb, null, bbwi.byteBuffer,
+-                               cdrOutputObject.getMessageHeader());
++        final ORB inOrb = orb;
++        final ByteBuffer inBuffer = bbwi.byteBuffer;
++        final Message inMsg = cdrOutputObject.getMessageHeader();
++        CDRInputObject cdrInputObject = AccessController
++                .doPrivileged(new PrivilegedAction<CDRInputObject>() {
++                    @Override
++                    public CDRInputObject run() {
++                        return new CDRInputObject(inOrb, null, inBuffer,
++                                inMsg);
++                    }
++                });
+         messageMediator.setInputObject(cdrInputObject);
+         cdrInputObject.setMessageMediator(messageMediator);
+ 
+@@ -192,9 +201,17 @@
+         cdrOutputObject = (CDROutputObject) messageMediator.getOutputObject();
+         bbwi = cdrOutputObject.getByteBufferWithInfo();
+         cdrOutputObject.getMessageHeader().setSize(bbwi.byteBuffer, bbwi.getSize());
+-        cdrInputObject =
+-            new CDRInputObject(orb, null, bbwi.byteBuffer,
+-                               cdrOutputObject.getMessageHeader());
++        final ORB inOrb2 = orb;
++        final ByteBuffer inBuffer2 = bbwi.byteBuffer;
++        final Message inMsg2 = cdrOutputObject.getMessageHeader();
++        cdrInputObject = AccessController
++                .doPrivileged(new PrivilegedAction<CDRInputObject>() {
++                    @Override
++                    public CDRInputObject run() {
++                        return new CDRInputObject(inOrb2, null, inBuffer2,
++                                inMsg2);
++                    }
++                });
+         messageMediator.setInputObject(cdrInputObject);
+         cdrInputObject.setMessageMediator(messageMediator);
+ 
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/impl/resolver/INSURLOperationImpl.java openjdk/corba/src/share/classes/com/sun/corba/se/impl/resolver/INSURLOperationImpl.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/impl/resolver/INSURLOperationImpl.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/impl/resolver/INSURLOperationImpl.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 1998, 2007, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -36,6 +36,8 @@
+ import org.omg.CosNaming.NamingContextExt ;
+ import org.omg.CosNaming.NamingContextExtHelper ;
+ 
++import sun.corba.EncapsInputStreamFactory;
++
+ import com.sun.corba.se.spi.ior.IOR;
+ import com.sun.corba.se.spi.ior.IORTemplate;
+ import com.sun.corba.se.spi.ior.ObjectKey;
+@@ -114,8 +116,8 @@
+              buf[j] = (byte)((ORBUtility.hexOf(str.charAt(i)) << UN_SHIFT) & 0xF0);
+              buf[j] |= (byte)(ORBUtility.hexOf(str.charAt(i+1)) & 0x0F);
+         }
+-        EncapsInputStream s = new EncapsInputStream(orb, buf, buf.length,
+-            orb.getORBData().getGIOPVersion());
++        EncapsInputStream s = EncapsInputStreamFactory.newEncapsInputStream(orb, buf, buf.length,
++                orb.getORBData().getGIOPVersion());
+         s.consumeEndian();
+         return s.read_Object() ;
+     }
+diff -Nru openjdk/corba/src/share/classes/com/sun/corba/se/spi/servicecontext/ServiceContexts.java openjdk/corba/src/share/classes/com/sun/corba/se/spi/servicecontext/ServiceContexts.java
+--- openjdk/corba/src/share/classes/com/sun/corba/se/spi/servicecontext/ServiceContexts.java
++++ openjdk/corba/src/share/classes/com/sun/corba/se/spi/servicecontext/ServiceContexts.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 1999, 2004, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 1999, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -58,6 +58,9 @@
+ import com.sun.corba.se.impl.util.Utility ;
+ import com.sun.corba.se.impl.logging.ORBUtilSystemException ;
+ 
++import sun.corba.EncapsInputStreamFactory;
++
++
+ public class ServiceContexts {
+     private static boolean isDebugging( OutputStream os )
+     {
+@@ -198,11 +201,11 @@
+             // Note:  As of Jan 2001, no standard OMG or Sun service contexts
+             // ship wchar data or are defined as using anything but GIOP 1.0 CDR.
+             EncapsInputStream eis
+-                = new EncapsInputStream(orb,
+-                                        data,
+-                                        data.length,
+-                                        giopVersion,
+-                                        codeBase);
++                = EncapsInputStreamFactory.newEncapsInputStream(orb,
++                                    data,
++                                    data.length,
++                                    giopVersion,
++                                    codeBase);
+             eis.consumeEndian();
+ 
+             // Now the input stream passed to a ServiceContext
+diff -Nru openjdk/corba/src/share/classes/org/omg/CORBA_2_3/portable/InputStream.java openjdk/corba/src/share/classes/org/omg/CORBA_2_3/portable/InputStream.java
+--- openjdk/corba/src/share/classes/org/omg/CORBA_2_3/portable/InputStream.java
++++ openjdk/corba/src/share/classes/org/omg/CORBA_2_3/portable/InputStream.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 1998, 2000, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -31,6 +31,10 @@
+ 
+ package org.omg.CORBA_2_3.portable;
+ 
++import java.io.SerializablePermission;
++import java.security.AccessController;
++import java.security.PrivilegedAction;
++
+ /**
+  * InputStream provides for the reading of all of the mapped IDL types
+  * from the stream. It extends org.omg.CORBA.portable.InputStream.  This
+@@ -43,6 +47,43 @@
+ 
+ public abstract class InputStream extends org.omg.CORBA.portable.InputStream {
+ 
++
++    private static final String ALLOW_SUBCLASS_PROP = "jdk.corba.allowInputStreamSubclass";
++
++    private static final boolean allowSubclass = AccessController.doPrivileged(
++        new PrivilegedAction<Boolean>() {
++            @Override
++            public Boolean run() {
++            String prop = System.getProperty(ALLOW_SUBCLASS_PROP);
++                return prop == null ? false :
++                           (prop.equalsIgnoreCase("false") ? false : true);
++            }
++        });
++
++    private static Void checkPermission() {
++        SecurityManager sm = System.getSecurityManager();
++        if (sm != null) {
++            if (!allowSubclass)
++                sm.checkPermission(new
++                    SerializablePermission("enableSubclassImplementation"));
++        }
++        return null;
++    }
++
++    private InputStream(Void ignore) { }
++
++    /**
++     * Create a new instance of this class.
++     *
++     * throw SecurityException if SecurityManager is installed and
++     * enableSubclassImplementation SerializablePermission
++     * is not granted or jdk.corba.allowOutputStreamSubclass system
++     * property is either not set or is set to 'false'
++     */
++    public InputStream() {
++        this(checkPermission());
++    }
++
+     /**
+      * Unmarshalls a value type from the input stream.
+      * @return the value type unmarshalled from the input stream
+diff -Nru openjdk/corba/src/share/classes/sun/corba/EncapsInputStreamFactory.java openjdk/corba/src/share/classes/sun/corba/EncapsInputStreamFactory.java
+new file mode 100644
+--- /dev/null
++++ openjdk/corba/src/share/classes/sun/corba/EncapsInputStreamFactory.java
+@@ -0,0 +1,153 @@
++/*
++ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.  Oracle designates this
++ * particular file as subject to the "Classpath" exception as provided
++ * by Oracle in the LICENSE file that accompanied this code.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * version 2 for more details (a copy is included in the LICENSE file that
++ * accompanied this code).
++ *
++ * You should have received a copy of the GNU General Public License version
++ * 2 along with this work; if not, write to the Free Software Foundation,
++ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
++ *
++ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
++ * or visit www.oracle.com if you need additional information or have any
++ * questions.
++ */
++package sun.corba;
++
++import java.nio.ByteBuffer;
++import java.security.AccessController;
++import java.security.PrivilegedAction;
++
++
++import com.sun.corba.se.impl.encoding.EncapsInputStream;
++import com.sun.corba.se.impl.encoding.TypeCodeInputStream;
++import com.sun.corba.se.impl.protocol.giopmsgheaders.Message;
++import com.sun.corba.se.pept.protocol.MessageMediator;
++import com.sun.corba.se.spi.ior.iiop.GIOPVersion;
++import com.sun.corba.se.spi.orb.ORB;
++import com.sun.org.omg.SendingContext.CodeBase;
++
++public class EncapsInputStreamFactory {
++
++    public static EncapsInputStream newEncapsInputStream(
++            final org.omg.CORBA.ORB orb, final byte[] buf, final int size,
++            final boolean littleEndian, final GIOPVersion version) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
++                    @Override
++                    public EncapsInputStream run() {
++                        return new EncapsInputStream(orb, buf, size,
++                                littleEndian, version);
++                    }
++                });
++    }
++
++    public static EncapsInputStream newEncapsInputStream(
++            final org.omg.CORBA.ORB orb, final ByteBuffer byteBuffer,
++            final int size, final boolean littleEndian,
++            final GIOPVersion version) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
++                    @Override
++                    public EncapsInputStream run() {
++                        return new EncapsInputStream(orb, byteBuffer, size,
++                                littleEndian, version);
++                    }
++                });
++    }
++
++    public static EncapsInputStream newEncapsInputStream(
++            final org.omg.CORBA.ORB orb, final byte[] data, final int size) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
++                    @Override
++                    public EncapsInputStream run() {
++                        return new EncapsInputStream(orb, data, size);
++                    }
++                });
++    }
++
++    public static EncapsInputStream newEncapsInputStream(
++            final EncapsInputStream eis) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
++                    @Override
++                    public EncapsInputStream run() {
++                        return new EncapsInputStream(eis);
++                    }
++                });
++    }
++
++    public static EncapsInputStream newEncapsInputStream(
++            final org.omg.CORBA.ORB orb, final byte[] data, final int size,
++            final GIOPVersion version) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
++                    @Override
++                    public EncapsInputStream run() {
++                        return new EncapsInputStream(orb, data, size, version);
++                    }
++                });
++    }
++
++    public static EncapsInputStream newEncapsInputStream(
++            final org.omg.CORBA.ORB orb, final byte[] data, final int size,
++            final GIOPVersion version, final CodeBase codeBase) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
++                    @Override
++                    public EncapsInputStream run() {
++                        return new EncapsInputStream(orb, data, size, version,
++                                codeBase);
++                    }
++                });
++    }
++
++    public static TypeCodeInputStream newTypeCodeInputStream(
++            final org.omg.CORBA.ORB orb, final byte[] buf, final int size,
++            final boolean littleEndian, final GIOPVersion version) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<TypeCodeInputStream>() {
++                    @Override
++                    public TypeCodeInputStream run() {
++                        return new TypeCodeInputStream(orb, buf, size,
++                                littleEndian, version);
++                    }
++                });
++    }
++
++    public static TypeCodeInputStream newTypeCodeInputStream(
++            final org.omg.CORBA.ORB orb, final ByteBuffer byteBuffer,
++            final int size, final boolean littleEndian,
++            final GIOPVersion version) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<TypeCodeInputStream>() {
++                    @Override
++                    public TypeCodeInputStream run() {
++                        return new TypeCodeInputStream(orb, byteBuffer, size,
++                                littleEndian, version);
++                    }
++                });
++    }
++
++    public static TypeCodeInputStream newTypeCodeInputStream(
++            final org.omg.CORBA.ORB orb, final byte[] data, final int size) {
++        return AccessController
++                .doPrivileged(new PrivilegedAction<TypeCodeInputStream>() {
++                    @Override
++                    public TypeCodeInputStream run() {
++                        return new TypeCodeInputStream(orb, data, size);
++                    }
++                });
++    }
++}

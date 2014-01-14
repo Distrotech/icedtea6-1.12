@@ -1,0 +1,34 @@
+# HG changeset patch
+# User malenkov
+# Date 1378126593 -14400
+#      Mon Sep 02 16:56:33 2013 +0400
+# Node ID 76445081396e1ba3ccf4a800011bd306b424a7d3
+# Parent  d2fd1283e0b7b978e47ae797731291bf09ba81d7
+8023245: Enhance Beans decoding
+Reviewed-by: art, skoivu, alanb
+
+diff -Nru openjdk/jdk/src/share/classes/com/sun/beans/ObjectHandler.java openjdk/jdk/src/share/classes/com/sun/beans/ObjectHandler.java
+--- openjdk/jdk/src/share/classes/com/sun/beans/ObjectHandler.java
++++ openjdk/jdk/src/share/classes/com/sun/beans/ObjectHandler.java
+@@ -29,6 +29,7 @@
+ 
+ import java.beans.*;
+ import java.util.*;
++import java.io.StringReader;
+ 
+ import org.xml.sax.*;
+ 
+@@ -153,6 +154,13 @@
+         expStack.add(e);
+     }
+ 
++    /**
++     * Disables any external entities.
++     */
++    public InputSource resolveEntity(String publicId, String systemId) {
++        return new InputSource(new StringReader(""));
++    }
++
+     private Object getValue(Expression exp) {
+         try {
+             return exp.getValue();

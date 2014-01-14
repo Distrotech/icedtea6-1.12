@@ -1,0 +1,194 @@
+# HG changeset patch
+# User alanb
+# Date 1382438427 -3600
+#      Tue Oct 22 11:40:27 2013 +0100
+# Node ID 8662d95ebee18761895cbeacb674cdb187163f03
+# Parent  47195b885932f562e1b003c046ada354dabf7cfe
+8021257: com.sun.corba.se.** should be on restricted package list
+Reviewed-by: chegar, coffeys, smarks
+Contributed-by: alan.bateman@oralce.com, mark.sheppard@oracle.com
+
+diff -Nru openjdk/corba/src/share/classes/javax/rmi/CORBA/Stub.java openjdk/corba/src/share/classes/javax/rmi/CORBA/Stub.java
+--- openjdk/corba/src/share/classes/javax/rmi/CORBA/Stub.java
++++ openjdk/corba/src/share/classes/javax/rmi/CORBA/Stub.java
+@@ -61,13 +61,11 @@
+     private transient StubDelegate stubDelegate = null;
+     private static Class stubDelegateClass = null;
+     private static final String StubClassKey = "javax.rmi.CORBA.StubClass";
+-    private static final String defaultStubImplName = "com.sun.corba.se.impl.javax.rmi.CORBA.StubDelegateImpl";
+ 
+     static {
+-        Object stubDelegateInstance = (Object) createDelegateIfSpecified(StubClassKey, defaultStubImplName);
++        Object stubDelegateInstance = createDelegate(StubClassKey);
+         if (stubDelegateInstance != null)
+             stubDelegateClass = stubDelegateInstance.getClass();
+-
+     }
+ 
+ 
+@@ -207,7 +205,7 @@
+     // are in different packages and the visibility needs to be package for
+     // security reasons. If you know a better solution how to share this code
+     // then remove it from PortableRemoteObject. Also in Util.java
+-    private static Object createDelegateIfSpecified(String classKey, String defaultClassName) {
++    private static Object createDelegate(String classKey) {
+         String className = (String)
+             AccessController.doPrivileged(new GetPropertyAction(classKey));
+         if (className == null) {
+@@ -218,7 +216,7 @@
+         }
+ 
+         if (className == null) {
+-            className = defaultClassName;
++            return new com.sun.corba.se.impl.javax.rmi.CORBA.StubDelegateImpl();
+         }
+ 
+         try {
+diff -Nru openjdk/corba/src/share/classes/javax/rmi/CORBA/Util.java openjdk/corba/src/share/classes/javax/rmi/CORBA/Util.java
+--- openjdk/corba/src/share/classes/javax/rmi/CORBA/Util.java
++++ openjdk/corba/src/share/classes/javax/rmi/CORBA/Util.java
+@@ -60,14 +60,11 @@
+ public class Util {
+ 
+     // This can only be set at static initialization time (no sync necessary).
+-    private static javax.rmi.CORBA.UtilDelegate utilDelegate = null;
++    private static final javax.rmi.CORBA.UtilDelegate utilDelegate;
+     private static final String UtilClassKey = "javax.rmi.CORBA.UtilClass";
+-    private static final String defaultUtilImplName =
+-"com.sun.corba.se.impl.javax.rmi.CORBA.Util";
+ 
+     static {
+-        utilDelegate = (javax.rmi.CORBA.UtilDelegate)
+-            createDelegateIfSpecified(UtilClassKey, defaultUtilImplName);
++        utilDelegate = (javax.rmi.CORBA.UtilDelegate)createDelegate(UtilClassKey);
+     }
+ 
+     private Util(){}
+@@ -338,9 +335,7 @@
+     // are in different packages and the visibility needs to be package for
+     // security reasons. If you know a better solution how to share this code
+     // then remove it from PortableRemoteObject. Also in Stub.java
+-    private static Object createDelegateIfSpecified(String classKey,
+-        String defaultClassName)
+-    {
++    private static Object createDelegate(String classKey) {
+         String className = (String)
+             AccessController.doPrivileged(new GetPropertyAction(classKey));
+         if (className == null) {
+@@ -351,7 +346,7 @@
+         }
+ 
+         if (className == null) {
+-            className = defaultClassName;
++            return new com.sun.corba.se.impl.javax.rmi.CORBA.Util();
+         }
+ 
+         try {
+diff -Nru openjdk/corba/src/share/classes/javax/rmi/PortableRemoteObject.java openjdk/corba/src/share/classes/javax/rmi/PortableRemoteObject.java
+--- openjdk/corba/src/share/classes/javax/rmi/PortableRemoteObject.java
++++ openjdk/corba/src/share/classes/javax/rmi/PortableRemoteObject.java
+@@ -65,17 +65,14 @@
+  */
+ public class PortableRemoteObject {
+ 
+-    private static javax.rmi.CORBA.PortableRemoteObjectDelegate proDelegate = null;
++    private static final javax.rmi.CORBA.PortableRemoteObjectDelegate proDelegate;
+ 
+     private static final String PortableRemoteObjectClassKey =
+             "javax.rmi.CORBA.PortableRemoteObjectClass";
+ 
+-    private static final String defaultPortableRemoteObjectImplName =
+-            "com.sun.corba.se.impl.javax.rmi.PortableRemoteObject";
+-
+     static {
+         proDelegate = (javax.rmi.CORBA.PortableRemoteObjectDelegate)
+-            createDelegateIfSpecified(PortableRemoteObjectClassKey);
++            createDelegate(PortableRemoteObjectClassKey);
+     }
+ 
+     /**
+@@ -181,7 +178,7 @@
+     // are in different packages and the visibility needs to be package for
+     // security reasons. If you know a better solution how to share this code
+     // then remove it from here.
+-    private static Object createDelegateIfSpecified(String classKey) {
++    private static Object createDelegate(String classKey) {
+         String className = (String)
+             AccessController.doPrivileged(new GetPropertyAction(classKey));
+         if (className == null) {
+@@ -191,7 +188,7 @@
+             }
+         }
+         if (className == null) {
+-                className = defaultPortableRemoteObjectImplName;
++            return new com.sun.corba.se.impl.javax.rmi.PortableRemoteObject();
+         }
+ 
+         try {
+diff -Nru openjdk/corba/src/share/classes/org/omg/CORBA/ORB.java openjdk/corba/src/share/classes/org/omg/CORBA/ORB.java
+--- openjdk/corba/src/share/classes/org/omg/CORBA/ORB.java
++++ openjdk/corba/src/share/classes/org/omg/CORBA/ORB.java
+@@ -174,15 +174,6 @@
+     private static final String ORBSingletonClassKey = "org.omg.CORBA.ORBSingletonClass";
+ 
+     //
+-    // The last resort fallback ORB implementation classes in case
+-    // no ORB implementation class is dynamically configured through
+-    // properties or applet parameters. Change these values to
+-    // vendor-specific class names.
+-    //
+-    private static final String defaultORB = "com.sun.corba.se.impl.orb.ORBImpl";
+-    private static final String defaultORBSingleton = "com.sun.corba.se.impl.orb.ORBSingleton";
+-
+-    //
+     // The global instance of the singleton ORB implementation which
+     // acts as a factory for typecodes for generated Helper classes.
+     // TypeCodes should be immutable since they may be shared across
+@@ -294,10 +285,11 @@
+             String className = getSystemProperty(ORBSingletonClassKey);
+             if (className == null)
+                 className = getPropertyFromFile(ORBSingletonClassKey);
+-            if (className == null)
+-                className = defaultORBSingleton;
+-
+-            singleton = create_impl(className);
++            if (className == null) {
++                singleton = new com.sun.corba.se.impl.orb.ORBSingleton();
++            } else {
++                singleton = create_impl(className);
++            }
+         }
+         return singleton;
+     }
+@@ -347,10 +339,12 @@
+             className = getSystemProperty(ORBClassKey);
+         if (className == null)
+             className = getPropertyFromFile(ORBClassKey);
+-        if (className == null)
+-            className = defaultORB;
++        if (className == null) {
++            orb = new com.sun.corba.se.impl.orb.ORBImpl();
++        } else {
++            orb = create_impl(className);
++        }
+ 
+-        orb = create_impl(className);
+         orb.set_parameters(args, props);
+         return orb;
+     }
+@@ -375,10 +369,12 @@
+             className = getSystemProperty(ORBClassKey);
+         if (className == null)
+             className = getPropertyFromFile(ORBClassKey);
+-        if (className == null)
+-            className = defaultORB;
++        if (className == null) {
++            orb = new com.sun.corba.se.impl.orb.ORBImpl();
++        } else {
++            orb = create_impl(className);
++        }
+ 
+-        orb = create_impl(className);
+         orb.set_parameters(app, props);
+         return orb;
+     }

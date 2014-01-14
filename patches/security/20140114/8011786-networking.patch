@@ -1,0 +1,394 @@
+# HG changeset patch
+# User michaelm
+# Date 1383302456 0
+#      Fri Nov 01 10:40:56 2013 +0000
+# Node ID f2ddc5fa48bbca2a2e1a888bc617632b4f3526e0
+# Parent  322107c84c6d96944c624b348303aedfd5f2c0b3
+8011786: Better applet networking
+Summary: add checkListen() to client socket binds and new interpretation for port number 0 in SocketPermission
+Reviewed-by: chegar, alanb
+
+diff -Nru openjdk/jdk/src/share/classes/java/lang/SecurityManager.java openjdk/jdk/src/share/classes/java/lang/SecurityManager.java
+--- openjdk/jdk/src/share/classes/java/lang/SecurityManager.java
++++ openjdk/jdk/src/share/classes/java/lang/SecurityManager.java
+@@ -1131,12 +1131,8 @@
+      * @see        #checkPermission(java.security.Permission) checkPermission
+      */
+     public void checkListen(int port) {
+-        if (port == 0) {
+-            checkPermission(SecurityConstants.LOCAL_LISTEN_PERMISSION);
+-        } else {
+-            checkPermission(new SocketPermission("localhost:"+port,
+-                SecurityConstants.SOCKET_LISTEN_ACTION));
+-        }
++        checkPermission(new SocketPermission("localhost:"+port,
++            SecurityConstants.SOCKET_LISTEN_ACTION));
+     }
+ 
+     /**
+diff -Nru openjdk/jdk/src/share/classes/java/net/Socket.java openjdk/jdk/src/share/classes/java/net/Socket.java
+--- openjdk/jdk/src/share/classes/java/net/Socket.java
++++ openjdk/jdk/src/share/classes/java/net/Socket.java
+@@ -591,6 +591,10 @@
+         InetAddress addr = epoint.getAddress();
+         int port = epoint.getPort();
+         checkAddress (addr, "bind");
++        SecurityManager security = System.getSecurityManager();
++        if (security != null) {
++            security.checkListen(port);
++        }
+         getImpl().bind (addr, port);
+         bound = true;
+     }
+diff -Nru openjdk/jdk/src/share/classes/java/net/SocketPermission.java openjdk/jdk/src/share/classes/java/net/SocketPermission.java
+--- openjdk/jdk/src/share/classes/java/net/SocketPermission.java
++++ openjdk/jdk/src/share/classes/java/net/SocketPermission.java
+@@ -34,6 +34,9 @@
+ import java.net.InetAddress;
+ import java.security.Permission;
+ import java.security.PermissionCollection;
++import java.security.PrivilegedAction;
++import java.security.AccessController;
++import java.security.Security;
+ import java.security.Policy;
+ import java.io.Serializable;
+ import java.io.ObjectStreamField;
+@@ -176,6 +179,7 @@
+     private static final int PORT_MIN = 0;
+     private static final int PORT_MAX = 65535;
+     private static final int PRIV_PORT_MAX = 1023;
++    private static final int DEF_EPH_LOW = 49152;
+ 
+     // the actions mask
+     private transient int mask;
+@@ -228,6 +232,14 @@
+     private static Debug debug = null;
+     private static boolean debugInit = false;
+ 
++    // ephemeral port range for this system
++    private static final int ephemeralLow = initEphemeralPorts(
++        "low", DEF_EPH_LOW
++    );
++    private static final int ephemeralHigh = initEphemeralPorts(
++        "high", PORT_MAX
++    );
++
+     static {
+         Boolean tmp = java.security.AccessController.doPrivileged(
+                 new sun.security.action.GetBooleanAction("trustProxy"));
+@@ -367,6 +379,14 @@
+     }
+ 
+     /**
++     * Returns true if the permission has specified zero
++     * as its value (or lower bound) signifying the ephemeral range
++     */
++    private boolean includesEphemerals() {
++        return portrange[0] == 0;
++    }
++
++    /**
+      * Initialize the SocketPermission object. We don't do any DNS lookups
+      * as this point, instead we hold off until the implies method is
+      * called.
+@@ -868,10 +888,21 @@
+         int i,j;
+ 
+         if ((that.mask & RESOLVE) != that.mask) {
+-            // check port range
++
++            // check simple port range
+             if ((that.portrange[0] < this.portrange[0]) ||
+                     (that.portrange[1] > this.portrange[1])) {
++
++                // if either includes the ephemeral range, do full check
++                if (this.includesEphemerals() || that.includesEphemerals()) {
++                    if (!inRange(this.portrange[0], this.portrange[1],
++                                     that.portrange[0], that.portrange[1]))
++                    {
++                                return false;
++                    }
++                } else {
+                     return false;
++                }
+             }
+         }
+ 
+@@ -1187,6 +1218,86 @@
+         init(getName(),getMask(actions));
+     }
+ 
++    /**
++     * Check the system/security property for the ephemeral port range
++     * for this system. The suffix is either "high" or "low"
++     */
++    private static int initEphemeralPorts(
++        final String suffix, final int defval
++    )
++    {
++        return AccessController.doPrivileged(
++            new PrivilegedAction<Integer>(){
++                public Integer run() {
++                    int val = Integer.getInteger(
++                            "jdk.net.ephemeralPortRange."+suffix, -1
++                    );
++                    if (val != -1) {
++                        return val;
++                    } else {
++                        String prop = Security.getProperty(
++                            "network.ephemeralPortRange."+suffix
++                        );
++                        try {
++                                val = Integer.parseInt(prop);
++                        } catch (NumberFormatException e) {
++                            // shouldn't happen
++                            return defval;
++                        }
++                    }
++                    return val;
++                }
++            }
++        );
++    }
++
++    /**
++     * Check if the target range is within the policy range
++     * together with the ephemeral range for this platform
++     * (if policy includes ephemeral range)
++     */
++    private static boolean inRange(
++        int policyLow, int policyHigh, int targetLow, int targetHigh
++    )
++    {
++        if (targetLow == 0) {
++            // check policy includes ephemeral range
++            if (!inRange(policyLow, policyHigh, ephemeralLow, ephemeralHigh)) {
++                return false;
++            }
++            if (targetHigh == 0) {
++                // nothing left to do
++                return true;
++            }
++            // continue check with first real port number
++            targetLow = 1;
++        }
++
++        if (policyLow == 0 && policyHigh == 0) {
++            // ephemeral range only
++            return targetLow >= ephemeralLow && targetHigh <= ephemeralHigh;
++        }
++
++        if (policyLow != 0) {
++            // simple check of policy only
++            return targetLow >= policyLow && targetHigh <= policyHigh;
++        }
++
++        // policyLow == 0 which means possibly two ranges to check
++
++        // first check if policy and ephem range overlap/contiguous
++
++        if (policyHigh >= ephemeralLow - 1) {
++            return targetHigh <= ephemeralHigh;
++        }
++
++        // policy and ephem range do not overlap
++
++        // target range must lie entirely inside policy range or eph range
++
++        return  (targetLow <= policyHigh && targetHigh <= policyHigh) ||
++                (targetLow >= ephemeralLow && targetHigh <= ephemeralHigh);
++    }
+     /*
+     public String toString()
+     {
+diff -Nru openjdk/jdk/src/share/classes/sun/nio/ch/SocketChannelImpl.java openjdk/jdk/src/share/classes/sun/nio/ch/SocketChannelImpl.java
+--- openjdk/jdk/src/share/classes/sun/nio/ch/SocketChannelImpl.java
++++ openjdk/jdk/src/share/classes/sun/nio/ch/SocketChannelImpl.java
+@@ -470,6 +470,10 @@
+                     if (localAddress != null)
+                         throw new AlreadyBoundException();
+                     InetSocketAddress isa = Net.checkAddress(local);
++                    SecurityManager sm = System.getSecurityManager();
++                    if (sm != null) {
++                        sm.checkListen(isa.getPort());
++                    }
+                     Net.bind(fd, isa.getAddress(), isa.getPort());
+                     localAddress = Net.localAddress(fd);
+                 }
+diff -Nru openjdk/jdk/src/share/classes/sun/security/util/SecurityConstants.java openjdk/jdk/src/share/classes/sun/security/util/SecurityConstants.java
+--- openjdk/jdk/src/share/classes/sun/security/util/SecurityConstants.java
++++ openjdk/jdk/src/share/classes/sun/security/util/SecurityConstants.java
+@@ -184,7 +184,7 @@
+ 
+     // java.lang.SecurityManager
+     public static final SocketPermission LOCAL_LISTEN_PERMISSION =
+-        new SocketPermission("localhost:1024-", SOCKET_LISTEN_ACTION);
++        new SocketPermission("localhost:0", SOCKET_LISTEN_ACTION);
+ 
+     // javax.security.auth.Subject
+     public static final AuthPermission DO_AS_PERMISSION =
+diff -Nru openjdk/jdk/src/share/lib/security/java.policy openjdk/jdk/src/share/lib/security/java.policy
+--- openjdk/jdk/src/share/lib/security/java.policy
++++ openjdk/jdk/src/share/lib/security/java.policy
+@@ -2,47 +2,50 @@
+ // Standard extensions get all permissions by default
+ 
+ grant codeBase "file:${{java.ext.dirs}}/*" {
+-	permission java.security.AllPermission;
++        permission java.security.AllPermission;
+ };
+ 
+ // default permissions granted to all domains
+ 
+-grant { 
+-	// Allows any thread to stop itself using the java.lang.Thread.stop()
+-	// method that takes no argument.
+-	// Note that this permission is granted by default only to remain
+-	// backwards compatible.
+-	// It is strongly recommended that you either remove this permission
+-	// from this policy file or further restrict it to code sources
+-	// that you specify, because Thread.stop() is potentially unsafe.
+-	// See "http://java.sun.com/notes" for more information.
+-	permission java.lang.RuntimePermission "stopThread";
++grant {
++        // Allows any thread to stop itself using the java.lang.Thread.stop()
++        // method that takes no argument.
++        // Note that this permission is granted by default only to remain
++        // backwards compatible.
++        // It is strongly recommended that you either remove this permission
++        // from this policy file or further restrict it to code sources
++        // that you specify, because Thread.stop() is potentially unsafe.
++	       // See "http://java.sun.com/notes" for more information.
++        permission java.lang.RuntimePermission "stopThread";
+ 
+-	// allows anyone to listen on un-privileged ports
+-	permission java.net.SocketPermission "localhost:1024-", "listen";
++        // allows anyone to listen on dynamic ports
++        permission java.net.SocketPermission "localhost:0", "listen";
+ 
+-	// "standard" properies that can be read by anyone
++        // permission for standard RMI registry port
++        permission java.net.SocketPermission "localhost:1099", "listen";
+ 
+-	permission java.util.PropertyPermission "java.version", "read";
+-	permission java.util.PropertyPermission "java.vendor", "read";
+-	permission java.util.PropertyPermission "java.vendor.url", "read";
+-	permission java.util.PropertyPermission "java.class.version", "read";
+-	permission java.util.PropertyPermission "os.name", "read";
+-	permission java.util.PropertyPermission "os.version", "read";
+-	permission java.util.PropertyPermission "os.arch", "read";
+-	permission java.util.PropertyPermission "file.separator", "read";
+-	permission java.util.PropertyPermission "path.separator", "read";
+-	permission java.util.PropertyPermission "line.separator", "read";
++        // "standard" properies that can be read by anyone
+ 
+-	permission java.util.PropertyPermission "java.specification.version", "read";
+-	permission java.util.PropertyPermission "java.specification.vendor", "read";
+-	permission java.util.PropertyPermission "java.specification.name", "read";
++        permission java.util.PropertyPermission "java.version", "read";
++        permission java.util.PropertyPermission "java.vendor", "read";
++        permission java.util.PropertyPermission "java.vendor.url", "read";
++        permission java.util.PropertyPermission "java.class.version", "read";
++        permission java.util.PropertyPermission "os.name", "read";
++        permission java.util.PropertyPermission "os.version", "read";
++        permission java.util.PropertyPermission "os.arch", "read";
++        permission java.util.PropertyPermission "file.separator", "read";
++        permission java.util.PropertyPermission "path.separator", "read";
++        permission java.util.PropertyPermission "line.separator", "read";
+ 
+-	permission java.util.PropertyPermission "java.vm.specification.version", "read";
+-	permission java.util.PropertyPermission "java.vm.specification.vendor", "read";
+-	permission java.util.PropertyPermission "java.vm.specification.name", "read";
+-	permission java.util.PropertyPermission "java.vm.version", "read";
+-	permission java.util.PropertyPermission "java.vm.vendor", "read";
+-	permission java.util.PropertyPermission "java.vm.name", "read";
++        permission java.util.PropertyPermission "java.specification.version", "read";
++        permission java.util.PropertyPermission "java.specification.vendor", "read";
++        permission java.util.PropertyPermission "java.specification.name", "read";
++
++        permission java.util.PropertyPermission "java.vm.specification.version", "read";
++        permission java.util.PropertyPermission "java.vm.specification.vendor", "read";
++        permission java.util.PropertyPermission "java.vm.specification.name", "read";
++        permission java.util.PropertyPermission "java.vm.version", "read";
++        permission java.util.PropertyPermission "java.vm.vendor", "read";
++        permission java.util.PropertyPermission "java.vm.name", "read";
+ };
+ 
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-linux openjdk/jdk/src/share/lib/security/java.security-linux
+--- openjdk/jdk/src/share/lib/security/java.security-linux
++++ openjdk/jdk/src/share/lib/security/java.security-linux
+@@ -284,6 +284,22 @@
+ #   ocsp.responderCertSubjectName="CN=OCSP Responder, O=XYZ Corp"
+ 
+ #
++# Default ephemeral port ranges (operating system specific)
++# used by java.net.SocketPermission to interpret the meaning of the special
++# port value zero, as in the following example:
++#
++#       SocketPermission("localhost:0" , "listen");
++#
++# These can be overridden by the system properties:
++#
++#       jdk.net.ephemeralPortRange.low and
++#       jdk.net.ephemeralPortRange.high
++#
++# respectively.
++#
++network.ephemeralPortRange.low=32768
++network.ephemeralPortRange.high=65535
++#
+ # Issuer name of the OCSP responder's certificate
+ #
+ # By default, the certificate of the OCSP responder is that of the issuer
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-solaris openjdk/jdk/src/share/lib/security/java.security-solaris
+--- openjdk/jdk/src/share/lib/security/java.security-solaris
++++ openjdk/jdk/src/share/lib/security/java.security-solaris
+@@ -285,6 +285,22 @@
+ #   ocsp.responderCertSubjectName="CN=OCSP Responder, O=XYZ Corp"
+ 
+ #
++# Default ephemeral port ranges (operating system specific)
++# used by java.net.SocketPermission to interpret the meaning of the special
++# port value zero, as in the following example:
++#
++#        SocketPermission("localhost:0" , "listen");
++#
++# These can be overridden by the system properties:
++#
++#       jdk.net.ephemeralPortRange.low and
++#       jdk.net.ephemeralPortRange.high
++#
++# respectively.
++#
++network.ephemeralPortRange.low=32768
++network.ephemeralPortRange.high=65535
++#
+ # Issuer name of the OCSP responder's certificate
+ #
+ # By default, the certificate of the OCSP responder is that of the issuer
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-windows openjdk/jdk/src/share/lib/security/java.security-windows
+--- openjdk/jdk/src/share/lib/security/java.security-windows
++++ openjdk/jdk/src/share/lib/security/java.security-windows
+@@ -287,6 +287,22 @@
+ #   ocsp.responderCertSubjectName="CN=OCSP Responder, O=XYZ Corp"
+ 
+ #
++# Default ephemeral port ranges (operating system specific)
++# used by java.net.SocketPermission to interpret the meaning of the special
++# port value zero, as in the following example:
++#
++#        SocketPermission("localhost:0" , "listen");
++#
++# These can be overridden by the system properties:
++#
++#       jdk.net.ephemeralPortRange.low and
++#       jdk.net.ephemeralPortRange.high
++#
++# respectively.
++#
++network.ephemeralPortRange.low=49152
++network.ephemeralPortRange.high=65535
++#
+ # Issuer name of the OCSP responder's certificate
+ #
+ # By default, the certificate of the OCSP responder is that of the issuer

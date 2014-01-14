@@ -1,0 +1,627 @@
+# HG changeset patch
+# User xuelei
+# Date 1378430269 25200
+#      Thu Sep 05 18:17:49 2013 -0700
+# Node ID 2185882efa739f75432070168c8d00cd841d81d0
+# Parent  c4796b4be6b144653422100b14e33c0b817546ea
+8023069: Enhance TLS connections
+Summary: Also reviewed by Alexander Fomin and Andrew Gross
+Reviewed-by: wetmore
+
+diff -Nru openjdk/jdk/src/share/classes/com/sun/crypto/provider/TlsRsaPremasterSecretGenerator.java openjdk/jdk/src/share/classes/com/sun/crypto/provider/TlsRsaPremasterSecretGenerator.java
+--- openjdk/jdk/src/share/classes/com/sun/crypto/provider/TlsRsaPremasterSecretGenerator.java
++++ openjdk/jdk/src/share/classes/com/sun/crypto/provider/TlsRsaPremasterSecretGenerator.java
+@@ -73,13 +73,17 @@
+             throw new IllegalStateException
+                     ("TlsRsaPremasterSecretGenerator must be initialized");
+         }
+-        if (random == null) {
+-            random = new SecureRandom();
++        byte[] b = spec.getEncodedSecret();
++        if (b == null) {
++            if (random == null) {
++                random = new SecureRandom();
++            }
++            b = new byte[48];
++            random.nextBytes(b);
++            b[0] = (byte)spec.getMajorVersion();
++            b[1] = (byte)spec.getMinorVersion();
+         }
+-        byte[] b = new byte[48];
+-        random.nextBytes(b);
+-        b[0] = (byte)spec.getMajorVersion();
+-        b[1] = (byte)spec.getMinorVersion();
++
+         return new SecretKeySpec(b, "TlsRsaPremasterSecret");
+     }
+ 
+diff -Nru openjdk/jdk/src/share/classes/sun/security/internal/spec/TlsRsaPremasterSecretParameterSpec.java openjdk/jdk/src/share/classes/sun/security/internal/spec/TlsRsaPremasterSecretParameterSpec.java
+--- openjdk/jdk/src/share/classes/sun/security/internal/spec/TlsRsaPremasterSecretParameterSpec.java
++++ openjdk/jdk/src/share/classes/sun/security/internal/spec/TlsRsaPremasterSecretParameterSpec.java
+@@ -43,11 +43,12 @@
+ 
+     private final int majorVersion;
+     private final int minorVersion;
++    private final byte[] encodedSecret;
+ 
+     /**
+      * Constructs a new TlsRsaPremasterSecretParameterSpec.
+-     *
+-     * <p>The version numbers will be placed inside the premaster secret to
++     * <P>
++     * The version numbers will be placed inside the premaster secret to
+      * detect version rollbacks attacks as described in the TLS specification.
+      * Note that they do not indicate the protocol version negotiated for
+      * the handshake.
+@@ -61,6 +62,40 @@
+     public TlsRsaPremasterSecretParameterSpec(int majorVersion, int minorVersion) {
+         this.majorVersion = TlsMasterSecretParameterSpec.checkVersion(majorVersion);
+         this.minorVersion = TlsMasterSecretParameterSpec.checkVersion(minorVersion);
++        this.encodedSecret = null;
++    }
++
++    /**
++     * Constructs a new TlsRsaPremasterSecretParameterSpec.
++     * <P>
++     * The version numbers will be placed inside the premaster secret to
++     * detect version rollbacks attacks as described in the TLS specification.
++     * Note that they do not indicate the protocol version negotiated for
++     * the handshake.
++     * <P>
++     * Usually, the encoded secret key is a random number that acts as
++     * dummy pre_master_secret to avoid vulnerabilities described by
++     * section 7.4.7.1, RFC 5246.
++     *
++     * @param majorVersion the major number of the protocol version
++     * @param minorVersion the minor number of the protocol version
++     * @param encodedSecret the encoded secret key
++     *
++     * @throws IllegalArgumentException if minorVersion or majorVersion are
++     *   negative or larger than 255, or encodedSecret is not exactly 48 bytes.
++     */
++    public TlsRsaPremasterSecretParameterSpec(int majorVersion,
++            int minorVersion, byte[] encodedSecret) {
++        this.majorVersion =
++            TlsMasterSecretParameterSpec.checkVersion(majorVersion);
++        this.minorVersion =
++            TlsMasterSecretParameterSpec.checkVersion(minorVersion);
++
++        if (encodedSecret == null || encodedSecret.length != 48) {
++            throw new IllegalArgumentException(
++                        "Encoded secret is not exactly 48 bytes");
++        }
++        this.encodedSecret = encodedSecret.clone();
+     }
+ 
+     /**
+@@ -80,4 +115,13 @@
+     public int getMinorVersion() {
+         return minorVersion;
+     }
++
++    /**
++     * Returns the encoded secret.
++     *
++     * @return the encoded secret, may be null if no encoded secret.
++     */
++    public byte[] getEncodedSecret() {
++        return encodedSecret == null ? null : encodedSecret.clone();
++    }
+ }
+diff -Nru openjdk/jdk/src/share/classes/sun/security/pkcs11/P11RSACipher.java openjdk/jdk/src/share/classes/sun/security/pkcs11/P11RSACipher.java
+--- openjdk/jdk/src/share/classes/sun/security/pkcs11/P11RSACipher.java
++++ openjdk/jdk/src/share/classes/sun/security/pkcs11/P11RSACipher.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2003, 2012, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -417,28 +417,6 @@
+     // see JCE spec
+     protected Key engineUnwrap(byte[] wrappedKey, String algorithm,
+             int type) throws InvalidKeyException, NoSuchAlgorithmException {
+-        if (algorithm.equals("TlsRsaPremasterSecret")) {
+-            // the instance variable "session" has been initialized for
+-            // decrypt mode, so use a local variable instead.
+-            Session s = null;
+-            try {
+-                s = token.getObjSession();
+-                long keyType = CKK_GENERIC_SECRET;
+-                CK_ATTRIBUTE[] attributes = new CK_ATTRIBUTE[] {
+-                    new CK_ATTRIBUTE(CKA_CLASS, CKO_SECRET_KEY),
+-                    new CK_ATTRIBUTE(CKA_KEY_TYPE, keyType),
+-                };
+-                attributes = token.getAttributes
+-                    (O_IMPORT, CKO_SECRET_KEY, keyType, attributes);
+-                long keyID = token.p11.C_UnwrapKey(s.id(), new CK_MECHANISM(mechanism),
+-                    p11Key.keyID, wrappedKey, attributes);
+-                return P11Key.secretKey(session, keyID, algorithm, 48 << 3, attributes);
+-            } catch (PKCS11Exception e) {
+-                throw new InvalidKeyException("wrap() failed", e);
+-            } finally {
+-                token.releaseSession(s);
+-            }
+-        }
+         // XXX implement unwrap using C_Unwrap() for all keys
+         if (wrappedKey.length > maxInputSize) {
+             throw new InvalidKeyException("Key is too long for unwrapping");
+diff -Nru openjdk/jdk/src/share/classes/sun/security/pkcs11/P11TlsRsaPremasterSecretGenerator.java openjdk/jdk/src/share/classes/sun/security/pkcs11/P11TlsRsaPremasterSecretGenerator.java
+--- openjdk/jdk/src/share/classes/sun/security/pkcs11/P11TlsRsaPremasterSecretGenerator.java
++++ openjdk/jdk/src/share/classes/sun/security/pkcs11/P11TlsRsaPremasterSecretGenerator.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2005, 2007, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2005, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -88,23 +88,33 @@
+             throw new IllegalStateException
+                         ("TlsRsaPremasterSecretGenerator must be initialized");
+         }
+-        CK_VERSION version =
+-                new CK_VERSION(spec.getMajorVersion(), spec.getMinorVersion());
+-        Session session = null;
+-        try {
+-            session = token.getObjSession();
+-            CK_ATTRIBUTE[] attributes = token.getAttributes
+-                (O_GENERATE, CKO_SECRET_KEY, CKK_GENERIC_SECRET, new CK_ATTRIBUTE[0]);
+-            long keyID = token.p11.C_GenerateKey
+-                (session.id(), new CK_MECHANISM(mechanism, version), attributes);
+-            SecretKey key = P11Key.secretKey
+-                (session, keyID, "TlsRsaPremasterSecret", 48 << 3, attributes);
+-            return key;
+-        } catch (PKCS11Exception e) {
+-            throw new ProviderException("Could not generate premaster secret", e);
+-        } finally {
+-            token.releaseSession(session);
++
++        byte[] b = spec.getEncodedSecret();
++        if (b == null) {
++            CK_VERSION version = new CK_VERSION(
++                        spec.getMajorVersion(), spec.getMinorVersion());
++            Session session = null;
++            try {
++                session = token.getObjSession();
++                CK_ATTRIBUTE[] attributes = token.getAttributes(
++                        O_GENERATE, CKO_SECRET_KEY,
++                        CKK_GENERIC_SECRET, new CK_ATTRIBUTE[0]);
++                long keyID = token.p11.C_GenerateKey(session.id(),
++                        new CK_MECHANISM(mechanism, version), attributes);
++                SecretKey key = P11Key.secretKey(session,
++                        keyID, "TlsRsaPremasterSecret", 48 << 3, attributes);
++                return key;
++            } catch (PKCS11Exception e) {
++                throw new ProviderException(
++                        "Could not generate premaster secret", e);
++            } finally {
++                token.releaseSession(session);
++            }
+         }
++
++        // Won't worry, the TlsRsaPremasterSecret will be soon converted to
++        // TlsMasterSecret.
++        return new SecretKeySpec(b, "TlsRsaPremasterSecret");
+     }
+ 
+ }
+diff -Nru openjdk/jdk/src/share/classes/sun/security/rsa/RSAPadding.java openjdk/jdk/src/share/classes/sun/security/rsa/RSAPadding.java
+--- openjdk/jdk/src/share/classes/sun/security/rsa/RSAPadding.java
++++ openjdk/jdk/src/share/classes/sun/security/rsa/RSAPadding.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2003, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -318,33 +318,53 @@
+ 
+     /**
+      * PKCS#1 v1.5 unpadding (blocktype 1 and 2).
++     *
++     * Note that we want to make it a constant-time operation
+      */
+     private byte[] unpadV15(byte[] padded) throws BadPaddingException {
+         int k = 0;
++        BadPaddingException bpe = null;
++
+         if (padded[k++] != 0) {
+-            throw new BadPaddingException("Data must start with zero");
++            bpe = new BadPaddingException("Data must start with zero");
+         }
+-        if (padded[k++] != type) {
+-            throw new BadPaddingException("Blocktype mismatch: " + padded[1]);
++        if (padded[k++] != type && bpe == null) {
++            bpe = new BadPaddingException("Blocktype mismatch: " + padded[1]);
+         }
+-        while (true) {
++        int p = 0;
++        while (k < padded.length) {
+             int b = padded[k++] & 0xff;
+-            if (b == 0) {
+-                break;
++            if (b == 0 && p == 0) {
++                p = k;
+             }
+-            if (k == padded.length) {
+-                throw new BadPaddingException("Padding string not terminated");
++            if (k == padded.length && p == 0 && bpe == null) {
++                bpe = new BadPaddingException("Padding string not terminated");
+             }
+-            if ((type == PAD_BLOCKTYPE_1) && (b != 0xff)) {
+-                throw new BadPaddingException("Padding byte not 0xff: " + b);
++            if ((type == PAD_BLOCKTYPE_1) && (b != 0xff) &&
++                    p == 0 && bpe == null) {
++                bpe = new BadPaddingException("Padding byte not 0xff: " + b);
+             }
+         }
+-        int n = padded.length - k;
+-        if (n > maxDataSize) {
+-            throw new BadPaddingException("Padding string too short");
++        int n = padded.length - p;
++        if (n > maxDataSize && bpe == null) {
++            bpe = new BadPaddingException("Padding string too short");
+         }
++
++        // copy useless padding array for a constant-time method
++        //
++        // Is it necessary?
++        byte[] padding = new byte[p];
++        System.arraycopy(padded, 0, padding, 0, p);
++
+         byte[] data = new byte[n];
+-        System.arraycopy(padded, padded.length - n, data, 0, n);
++        System.arraycopy(padded, p, data, 0, n);
++
++        if (bpe == null) {
++            bpe = new BadPaddingException("Unused exception");
++        } else {
++            throw bpe;
++        }
++
+         return data;
+     }
+ 
+diff -Nru openjdk/jdk/src/share/classes/sun/security/ssl/Handshaker.java openjdk/jdk/src/share/classes/sun/security/ssl/Handshaker.java
+--- openjdk/jdk/src/share/classes/sun/security/ssl/Handshaker.java
++++ openjdk/jdk/src/share/classes/sun/security/ssl/Handshaker.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 1996, 2012, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 1996, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -762,70 +762,25 @@
+             // benefit to doing it twice
+         }
+ 
+-        SecretKey masterSecret;
+         try {
+             KeyGenerator kg = JsseJce.getKeyGenerator("SunTlsMasterSecret");
+             kg.init(spec);
+-            masterSecret = kg.generateKey();
+-        } catch (GeneralSecurityException e) {
+-            // For RSA premaster secrets, do not signal a protocol error
+-            // due to the Bleichenbacher attack. See comments further down.
+-            if (!preMasterSecret.getAlgorithm().equals("TlsRsaPremasterSecret")) {
+-                throw new ProviderException(e);
+-            }
++            return kg.generateKey();
++        } catch (InvalidAlgorithmParameterException e) {
++            // unlikely to happen, otherwise, must be a provider exception
+             if (debug != null && Debug.isOn("handshake")) {
+                 System.out.println("RSA master secret generation error:");
+                 e.printStackTrace(System.out);
+             }
+-            preMasterSecret =
+-                    RSAClientKeyExchange.generateDummySecret(protocolVersion);
+-            // recursive call with new premaster secret
+-            return calculateMasterSecret(preMasterSecret, null);
++            throw new ProviderException(e);
++        } catch (NoSuchAlgorithmException e) {
++            // unlikely to happen, otherwise, must be a provider exception
++            if (debug != null && Debug.isOn("handshake")) {
++                System.out.println("RSA master secret generation error:");
++                e.printStackTrace(System.out);
++            }
++            throw new ProviderException(e);
+         }
+-
+-        // if no version check requested (client side handshake),
+-        // or version information is not available (not an RSA premaster secret),
+-        // return master secret immediately.
+-        if ((requestedVersion == null) || !(masterSecret instanceof TlsMasterSecret)) {
+-            return masterSecret;
+-        }
+-        TlsMasterSecret tlsKey = (TlsMasterSecret)masterSecret;
+-        int major = tlsKey.getMajorVersion();
+-        int minor = tlsKey.getMinorVersion();
+-        if ((major < 0) || (minor < 0)) {
+-            return masterSecret;
+-        }
+-
+-        // check if the premaster secret version is ok
+-        // the specification says that it must be the maximum version supported
+-        // by the client from its ClientHello message. However, many
+-        // implementations send the negotiated version, so accept both
+-        // NOTE that we may be comparing two unsupported version numbers in
+-        // the second case, which is why we cannot use object reference
+-        // equality in this special case
+-        ProtocolVersion premasterVersion = ProtocolVersion.valueOf(major, minor);
+-        boolean versionMismatch = (premasterVersion != protocolVersion) &&
+-                                  (premasterVersion.v != requestedVersion.v);
+-
+-
+-        if (versionMismatch == false) {
+-            // check passed, return key
+-            return masterSecret;
+-        }
+-
+-        // Due to the Bleichenbacher attack, do not signal a protocol error.
+-        // Generate a random premaster secret and continue with the handshake,
+-        // which will fail when verifying the finished messages.
+-        // For more information, see comments in PreMasterSecret.
+-        if (debug != null && Debug.isOn("handshake")) {
+-            System.out.println("RSA PreMasterSecret version error: expected"
+-                + protocolVersion + " or " + requestedVersion + ", decrypted: "
+-                + premasterVersion);
+-        }
+-        preMasterSecret =
+-                RSAClientKeyExchange.generateDummySecret(protocolVersion);
+-        // recursive call with new premaster secret
+-        return calculateMasterSecret(preMasterSecret, null);
+     }
+ 
+     /*
+diff -Nru openjdk/jdk/src/share/classes/sun/security/ssl/RSAClientKeyExchange.java openjdk/jdk/src/share/classes/sun/security/ssl/RSAClientKeyExchange.java
+--- openjdk/jdk/src/share/classes/sun/security/ssl/RSAClientKeyExchange.java
++++ openjdk/jdk/src/share/classes/sun/security/ssl/RSAClientKeyExchange.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 1996, 2012, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 1996, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -123,7 +123,8 @@
+      * it with its private key.
+      */
+     RSAClientKeyExchange(ProtocolVersion currentVersion,
+-            ProtocolVersion maxVersion, HandshakeInStream input,
++            ProtocolVersion maxVersion,
++            SecureRandom generator, HandshakeInStream input,
+             int messageSize, PrivateKey privateKey) throws IOException {
+ 
+         if (privateKey.getAlgorithm().equals("RSA") == false) {
+@@ -141,20 +142,32 @@
+             }
+         }
+ 
++        Exception failover = null;
++        byte[] encoded = null;
+         try {
+             Cipher cipher = JsseJce.getCipher(JsseJce.CIPHER_RSA_PKCS1);
+-            cipher.init(Cipher.UNWRAP_MODE, privateKey);
+-            preMaster = (SecretKey)cipher.unwrap(encrypted,
+-                                "TlsRsaPremasterSecret", Cipher.SECRET_KEY);
++            // Cannot generate key here, please don't use Cipher.UNWRAP_MODE!
++            cipher.init(Cipher.DECRYPT_MODE, privateKey);
++            encoded = cipher.doFinal(encrypted);
++        } catch (BadPaddingException bpe) {
++            failover = bpe;
++            encoded = null;
++        } catch (IllegalBlockSizeException ibse) {
++            // the message it too big to process with RSA
++            throw new SSLProtocolException(
++                "Unable to process PreMasterSecret, may be too big");
++        } catch (Exception e) {
++            // unlikely to happen, otherwise, must be a provider exception
++            if (debug != null && Debug.isOn("handshake")) {
++                System.out.println("RSA premaster secret decryption error:");
++                e.printStackTrace(System.out);
++            }
++            throw new RuntimeException("Could not generate dummy secret", e);
++        }
+ 
+-            // polish the premaster secret
+-            preMaster = polishPreMasterSecretKey(
+-                                currentVersion, maxVersion, preMaster, null);
+-        } catch (Exception e) {
+-            // polish the premaster secret
+-            preMaster = polishPreMasterSecretKey(
+-                                currentVersion, maxVersion, preMaster, e);
+-        }
++         // polish the premaster secret
++         preMaster = polishPreMasterSecretKey(
++                     currentVersion, maxVersion, generator, encoded, failover);
+     }
+ 
+     /**
+@@ -165,58 +178,53 @@
+      *
+      * RFC 5246 describes the approach as :
+      *
+-     *  1. Generate a string R of 46 random bytes
++     *  1. Generate a string R of 48 random bytes
+      *
+      *  2. Decrypt the message to recover the plaintext M
+      *
+      *  3. If the PKCS#1 padding is not correct, or the length of message
+      *     M is not exactly 48 bytes:
+-     *        pre_master_secret = ClientHello.client_version || R
++     *        pre_master_secret = R
+      *     else If ClientHello.client_version <= TLS 1.0, and version
+      *     number check is explicitly disabled:
+-     *        pre_master_secret = M
++     *        premaster secret = M
++     *     else If M[0..1] != ClientHello.client_version:
++     *        premaster secret = R
+      *     else:
+-     *        pre_master_secret = ClientHello.client_version || M[2..47]
++     *        premaster secret = M
++     *
++     * Note that #2 has completed before the call of this method.
+      *
+      * Note that although TLS 1.2 is not supported in this release, we still
+      * want to make use of the above approach to provide better protection.
+      */
+-    private SecretKey polishPreMasterSecretKey(
+-            ProtocolVersion currentVersion, ProtocolVersion clientHelloVersion,
+-            SecretKey secretKey, Exception failoverException) {
++    private SecretKey polishPreMasterSecretKey(ProtocolVersion currentVersion,
++            ProtocolVersion clientHelloVersion, SecureRandom generator,
++            byte[] encoded, Exception failoverException) {
+ 
+-        if (failoverException == null && secretKey != null) {
++        this.protocolVersion = clientHelloVersion;
++        if (generator == null) {
++            generator = new SecureRandom();
++        }
++        byte[] random = new byte[48];
++        generator.nextBytes(random);
++
++        if (failoverException == null && encoded != null) {
+             // check the length
+-            byte[] encoded = secretKey.getEncoded();
+-            if (encoded == null) {      // unable to get the encoded key
++            if (encoded.length != 48) {
+                 if (debug != null && Debug.isOn("handshake")) {
+                     System.out.println(
+-                        "unable to get the plaintext of the premaster secret");
++                        "incorrect length of premaster secret: " +
++                        encoded.length);
+                 }
+ 
+-                int keySize = KeyUtil.getKeySize(secretKey);
+-                if (keySize > 0 && keySize != 384) {       // 384 = 48 * 8
+-                    if (debug != null && Debug.isOn("handshake")) {
+-                        System.out.println(
+-                            "incorrect length of premaster secret: " +
+-                            (keySize/8));
+-                    }
++                return generatePreMasterSecret(
++                        clientHelloVersion, random, generator);
++            }
++            if (clientHelloVersion.major != encoded[0] ||
++                        clientHelloVersion.minor != encoded[1]) {
+ 
+-                    return generateDummySecret(currentVersion);
+-                }
+-
+-                // The key size is exactly 48 bytes or not accessible.
+-                //
+-                // Conservatively, pass the checking to master secret
+-                // calculation.
+-                return secretKey;
+-            } else if (encoded.length == 48) {
+-                // check the version
+-                if (clientHelloVersion.major == encoded[0] &&
+-                    clientHelloVersion.minor == encoded[1]) {
+-
+-                    return secretKey;
+-                } else if (clientHelloVersion.v <= ProtocolVersion.TLS10.v &&
++                if (clientHelloVersion.v <= ProtocolVersion.TLS10.v &&
+                            currentVersion.major == encoded[0] &&
+                            currentVersion.minor == encoded[1]) {
+                     /*
+@@ -224,24 +232,22 @@
+                      * version in pre_master_secret can be the negotiated
+                      * version for TLS v1.0 and SSL v3.0.
+                      */
+-                    return secretKey;
++                    this.protocolVersion = currentVersion;
++                } else {
++                    if (debug != null && Debug.isOn("handshake")) {
++                        System.out.println("Mismatching Protocol Versions, " +
++                            "ClientHello.client_version is " +
++                            clientHelloVersion +
++                            ", while PreMasterSecret.client_version is " +
++                            ProtocolVersion.valueOf(encoded[0], encoded[1]));
++                    }
++
++                    encoded = random;
+                 }
++            }
+ 
+-                if (debug != null && Debug.isOn("handshake")) {
+-                    System.out.println("Mismatching Protocol Versions, " +
+-                        "ClientHello.client_version is " + clientHelloVersion +
+-                        ", while PreMasterSecret.client_version is " +
+-                        ProtocolVersion.valueOf(encoded[0], encoded[1]));
+-                }
+-                return generateDummySecret(currentVersion);
+-            } else {
+-                if (debug != null && Debug.isOn("handshake")) {
+-                    System.out.println(
+-                        "incorrect length of premaster secret: " +
+-                        encoded.length);
+-                }
+-                return generateDummySecret(currentVersion);
+-            }
++            return generatePreMasterSecret(
++                    clientHelloVersion, encoded, generator);
+         }
+ 
+         if (debug != null && Debug.isOn("handshake") &&
+@@ -250,11 +256,14 @@
+             failoverException.printStackTrace(System.out);
+         }
+ 
+-        return generateDummySecret(currentVersion);
++        return generatePreMasterSecret(clientHelloVersion, random, generator);
+     }
+ 
+     // generate a premaster secret with the specified version number
+-    static SecretKey generateDummySecret(ProtocolVersion version) {
++    private static SecretKey generatePreMasterSecret(
++            ProtocolVersion version, byte[] encodedSecret,
++            SecureRandom generator) {
++
+         if (debug != null && Debug.isOn("handshake")) {
+             System.out.println("Generating a random fake premaster secret");
+         }
+@@ -262,11 +271,23 @@
+         try {
+             KeyGenerator kg =
+                     JsseJce.getKeyGenerator("SunTlsRsaPremasterSecret");
+-            kg.init(new TlsRsaPremasterSecretParameterSpec
+-                    (version.major, version.minor));
++            kg.init(new TlsRsaPremasterSecretParameterSpec(
++                    version.major, version.minor, encodedSecret), generator);
+             return kg.generateKey();
+-        } catch (GeneralSecurityException e) {
+-            throw new RuntimeException("Could not generate dummy secret", e);
++        } catch (InvalidAlgorithmParameterException iae) {
++            // unlikely to happen, otherwise, must be a provider exception
++            if (debug != null && Debug.isOn("handshake")) {
++                System.out.println("RSA premaster secret generation error:");
++                iae.printStackTrace(System.out);
++            }
++            throw new RuntimeException("Could not generate dummy secret", iae);
++        } catch (NoSuchAlgorithmException iae) {
++            // unlikely to happen, otherwise, must be a provider exception
++            if (debug != null && Debug.isOn("handshake")) {
++                System.out.println("RSA premaster secret generation error:");
++                iae.printStackTrace(System.out);
++            }
++            throw new RuntimeException("Could not generate dummy secret", iae);
+         }
+     }
+ 
+diff -Nru openjdk/jdk/src/share/classes/sun/security/ssl/ServerHandshaker.java openjdk/jdk/src/share/classes/sun/security/ssl/ServerHandshaker.java
+--- openjdk/jdk/src/share/classes/sun/security/ssl/ServerHandshaker.java
++++ openjdk/jdk/src/share/classes/sun/security/ssl/ServerHandshaker.java
+@@ -192,7 +192,8 @@
+                      */
+                     RSAClientKeyExchange pms = new RSAClientKeyExchange(
+                             protocolVersion, clientRequestedVersion,
+-                            input, message_len, privateKey);
++                            sslContext.getSecureRandom(), input,
++                            message_len, privateKey);
+                     preMasterSecret = this.clientKeyExchange(pms);
+                     break;
+                 case K_KRB5:

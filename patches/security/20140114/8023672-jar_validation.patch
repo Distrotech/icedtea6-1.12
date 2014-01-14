@@ -1,0 +1,24 @@
+# HG changeset patch
+# User weijun
+# Date 1379056959 -28800
+#      Fri Sep 13 15:22:39 2013 +0800
+# Node ID 16e444c32915fcf9ec46b2c15d455c220ddc9085
+# Parent  0130075b454ced66b4c2f557f84c4253f8052de2
+8023672: Enhance jar file validation
+Summary: Also reviewed by Chris Ries and Alexander Fomin
+Reviewed-by: mullan, sherman
+
+diff -Nru openjdk/jdk/src/share/classes/java/util/jar/JarVerifier.java openjdk/jdk/src/share/classes/java/util/jar/JarVerifier.java
+--- openjdk/jdk/src/share/classes/java/util/jar/JarVerifier.java
++++ openjdk/jdk/src/share/classes/java/util/jar/JarVerifier.java
+@@ -158,7 +158,9 @@
+             name = name.substring(1);
+ 
+         // only set the jev object for entries that have a signature
+-        if (sigFileSigners.get(name) != null) {
++        // (either verified or not)
++        if (sigFileSigners.get(name) != null ||
++                verifiedSigners.get(name) != null) {
+             mev.setEntry(name, je);
+             return;
+         }

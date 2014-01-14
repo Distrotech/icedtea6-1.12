@@ -311,3 +311,163 @@ diff -Nru openjdk-ecj.orig/jdk/src/share/classes/sun/swing/plaf/synth/SynthFileC
          public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
              Component c = delegate.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
  
+diff -ruN openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/corba/AnyImpl.java openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/corba/AnyImpl.java
+--- openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/corba/AnyImpl.java	2014-01-10 16:24:15.000000000 -0500
++++ openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/corba/AnyImpl.java	2014-01-14 09:38:04.744121397 -0500
+@@ -87,7 +87,6 @@
+                     .create_input_stream();
+             AnyInputStream aIS = AccessController
+                     .doPrivileged(new PrivilegedAction<AnyInputStream>() {
+-                        @Override
+                         public AnyInputStream run() {
+                             return new AnyInputStream(
+                                     (com.sun.corba.se.impl.encoding.EncapsInputStream) is);
+diff -ruN openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/presentation/rmi/StubFactoryFactoryProxyImpl.java openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/presentation/rmi/StubFactoryFactoryProxyImpl.java
+--- openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/presentation/rmi/StubFactoryFactoryProxyImpl.java	2014-01-10 16:24:28.000000000 -0500
++++ openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/presentation/rmi/StubFactoryFactoryProxyImpl.java	2014-01-14 09:38:22.856141402 -0500
+@@ -38,7 +38,6 @@
+     {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<StubFactoryProxyImpl>() {
+-                    @Override
+                     public StubFactoryProxyImpl run() {
+                         return new StubFactoryProxyImpl(classData, classLoader);
+                     }
+diff -ruN openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/protocol/SharedCDRClientRequestDispatcherImpl.java openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/protocol/SharedCDRClientRequestDispatcherImpl.java
+--- openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/protocol/SharedCDRClientRequestDispatcherImpl.java	2014-01-10 16:24:15.000000000 -0500
++++ openjdk-ecj/corba/src/share/classes/com/sun/corba/se/impl/protocol/SharedCDRClientRequestDispatcherImpl.java	2014-01-14 09:34:50.248822900 -0500
+@@ -163,7 +163,6 @@
+         final Message inMsg = cdrOutputObject.getMessageHeader();
+         CDRInputObject cdrInputObject = AccessController
+                 .doPrivileged(new PrivilegedAction<CDRInputObject>() {
+-                    @Override
+                     public CDRInputObject run() {
+                         return new CDRInputObject(inOrb, null, inBuffer,
+                                 inMsg);
+@@ -206,7 +205,6 @@
+         final Message inMsg2 = cdrOutputObject.getMessageHeader();
+         cdrInputObject = AccessController
+                 .doPrivileged(new PrivilegedAction<CDRInputObject>() {
+-                    @Override
+                     public CDRInputObject run() {
+                         return new CDRInputObject(inOrb2, null, inBuffer2,
+                                 inMsg2);
+diff -ruN openjdk-ecj/corba/src/share/classes/org/omg/CORBA_2_3/portable/InputStream.java openjdk-ecj/corba/src/share/classes/org/omg/CORBA_2_3/portable/InputStream.java
+--- openjdk-ecj/corba/src/share/classes/org/omg/CORBA_2_3/portable/InputStream.java	2014-01-10 16:24:15.000000000 -0500
++++ openjdk-ecj/corba/src/share/classes/org/omg/CORBA_2_3/portable/InputStream.java	2014-01-14 09:35:08.657861832 -0500
+@@ -52,7 +52,6 @@
+ 
+     private static final boolean allowSubclass = AccessController.doPrivileged(
+         new PrivilegedAction<Boolean>() {
+-            @Override
+             public Boolean run() {
+             String prop = System.getProperty(ALLOW_SUBCLASS_PROP);
+                 return prop == null ? false :
+diff -ruN openjdk-ecj/corba/src/share/classes/sun/corba/EncapsInputStreamFactory.java openjdk-ecj/corba/src/share/classes/sun/corba/EncapsInputStreamFactory.java
+--- openjdk-ecj/corba/src/share/classes/sun/corba/EncapsInputStreamFactory.java	2014-01-10 16:24:15.000000000 -0500
++++ openjdk-ecj/corba/src/share/classes/sun/corba/EncapsInputStreamFactory.java	2014-01-14 09:34:21.846755388 -0500
+@@ -44,7 +44,6 @@
+             final boolean littleEndian, final GIOPVersion version) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
+-                    @Override
+                     public EncapsInputStream run() {
+                         return new EncapsInputStream(orb, buf, size,
+                                 littleEndian, version);
+@@ -58,7 +57,6 @@
+             final GIOPVersion version) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
+-                    @Override
+                     public EncapsInputStream run() {
+                         return new EncapsInputStream(orb, byteBuffer, size,
+                                 littleEndian, version);
+@@ -70,7 +68,6 @@
+             final org.omg.CORBA.ORB orb, final byte[] data, final int size) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
+-                    @Override
+                     public EncapsInputStream run() {
+                         return new EncapsInputStream(orb, data, size);
+                     }
+@@ -81,7 +78,6 @@
+             final EncapsInputStream eis) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
+-                    @Override
+                     public EncapsInputStream run() {
+                         return new EncapsInputStream(eis);
+                     }
+@@ -93,7 +89,6 @@
+             final GIOPVersion version) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
+-                    @Override
+                     public EncapsInputStream run() {
+                         return new EncapsInputStream(orb, data, size, version);
+                     }
+@@ -105,7 +100,6 @@
+             final GIOPVersion version, final CodeBase codeBase) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<EncapsInputStream>() {
+-                    @Override
+                     public EncapsInputStream run() {
+                         return new EncapsInputStream(orb, data, size, version,
+                                 codeBase);
+@@ -118,7 +112,6 @@
+             final boolean littleEndian, final GIOPVersion version) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<TypeCodeInputStream>() {
+-                    @Override
+                     public TypeCodeInputStream run() {
+                         return new TypeCodeInputStream(orb, buf, size,
+                                 littleEndian, version);
+@@ -132,7 +125,6 @@
+             final GIOPVersion version) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<TypeCodeInputStream>() {
+-                    @Override
+                     public TypeCodeInputStream run() {
+                         return new TypeCodeInputStream(orb, byteBuffer, size,
+                                 littleEndian, version);
+@@ -144,7 +136,6 @@
+             final org.omg.CORBA.ORB orb, final byte[] data, final int size) {
+         return AccessController
+                 .doPrivileged(new PrivilegedAction<TypeCodeInputStream>() {
+-                    @Override
+                     public TypeCodeInputStream run() {
+                         return new TypeCodeInputStream(orb, data, size);
+                     }
+diff -ruN openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/tools/internal/jxc/model/nav/APTNavigator.java openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/tools/internal/jxc/model/nav/APTNavigator.java
+--- openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/tools/internal/jxc/model/nav/APTNavigator.java	2014-01-13 11:30:44.000000000 -0500
++++ openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/tools/internal/jxc/model/nav/APTNavigator.java	2014-01-14 09:55:36.216424718 -0500
+@@ -272,7 +272,6 @@
+         return clazz.getPackage().getQualifiedName();
+     }
+ 
+-    @Override
+     public TypeDeclaration loadObjectFactory(TypeDeclaration referencePoint, String packageName) {
+         return env.getTypeDeclaration(packageName + ".ObjectFactory");
+     }
+diff -ruN openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/tools/internal/xjc/model/nav/NavigatorImpl.java openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/tools/internal/xjc/model/nav/NavigatorImpl.java
+--- openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/tools/internal/xjc/model/nav/NavigatorImpl.java	2014-01-13 11:30:44.000000000 -0500
++++ openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/tools/internal/xjc/model/nav/NavigatorImpl.java	2014-01-14 09:55:54.141449331 -0500
+@@ -299,7 +299,6 @@
+         throw new UnsupportedOperationException();
+     }
+ 
+-    @Override
+     public NClass loadObjectFactory(NClass referencePoint, String pkg) {
+         throw new UnsupportedOperationException();
+     }
+diff -ruN openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/xml/internal/bind/v2/model/nav/ReflectionNavigator.java openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/xml/internal/bind/v2/model/nav/ReflectionNavigator.java
+--- openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/xml/internal/bind/v2/model/nav/ReflectionNavigator.java	2014-01-13 11:30:44.000000000 -0500
++++ openjdk-ecj/jaxws/drop_included/jaxws_src/src/com/sun/xml/internal/bind/v2/model/nav/ReflectionNavigator.java	2014-01-14 09:56:08.879470090 -0500
+@@ -507,7 +507,6 @@
+         else        return name.substring(0,idx);
+     }
+ 
+-    @Override
+     public Class loadObjectFactory(Class referencePoint, String pkg) {
+         String clName = pkg + ".ObjectFactory";
+         checkPackageAccess(clName);

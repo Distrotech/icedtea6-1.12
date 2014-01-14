@@ -12,15 +12,6 @@ diff -Nru openjdk.orig/jdk/src/share/classes/sun/security/pkcs11/P11RSACipher.ja
          } else {
              throw new InvalidKeyException("Unsupported mode: " + opmode);
          }
-@@ -432,7 +434,7 @@
-                     (O_IMPORT, CKO_SECRET_KEY, keyType, attributes);
-                 long keyID = token.p11.C_UnwrapKey(s.id(), new CK_MECHANISM(mechanism),
-                     p11Key.keyID, wrappedKey, attributes);
--                return P11Key.secretKey(session, keyID, algorithm, 48 << 3, attributes);
-+                return P11Key.secretKey(s, keyID, algorithm, 48 << 3, attributes);
-             } catch (PKCS11Exception e) {
-                 throw new InvalidKeyException("wrap() failed", e);
-             } finally {
 @@ -440,6 +442,7 @@
              }
          }

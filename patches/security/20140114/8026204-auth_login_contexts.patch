@@ -1,0 +1,307 @@
+# HG changeset patch
+# User xuelei
+# Date 1381893320 25200
+#      Tue Oct 15 20:15:20 2013 -0700
+# Node ID c331d7827c61b73b362121f902b38224d7112955
+# Parent  d6b926b610d956b000045f41e469555a2e241ea7
+8026204: Enhance auth login contexts
+Summary: Enforce package access control with current context. Also reviewed by Alexander Fomin <alexander.fomin@oracle.com>
+Reviewed-by: weijun, ahgross
+
+diff -Nru openjdk/jdk/src/share/classes/javax/security/auth/login/LoginContext.java openjdk/jdk/src/share/classes/javax/security/auth/login/LoginContext.java
+--- openjdk/jdk/src/share/classes/javax/security/auth/login/LoginContext.java
++++ openjdk/jdk/src/share/classes/javax/security/auth/login/LoginContext.java
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 1998, 2006, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -37,8 +37,10 @@
+ import javax.security.auth.callback.*;
+ import java.security.AccessController;
+ import java.security.AccessControlContext;
++import java.security.PrivilegedAction;
+ import sun.security.util.PendingException;
+ import sun.security.util.ResourcesMgr;
++import sun.reflect.misc.ReflectUtil;
+ 
+ /**
+  * <p> The <code>LoginContext</code> class describes the basic methods used
+@@ -217,8 +219,7 @@
+     private Map state = new HashMap();
+ 
+     private Configuration config;
+-    private boolean configProvided = false;
+-    private AccessControlContext creatorAcc = null;
++    private AccessControlContext creatorAcc = null;  // customized config only
+     private ModuleInfo[] moduleStack;
+     private ClassLoader contextClassLoader = null;
+     private static final Class[] PARAMS = { };
+@@ -234,10 +235,23 @@
+     private static final sun.security.util.Debug debug =
+         sun.security.util.Debug.getInstance("logincontext", "\t[LoginContext]");
+ 
++    // workaround to disable additional package access control with
++    // Thread Context Class Loader (TCCL).
++    private static final boolean noPackageAccessWithTCCL = "true".equals(
++        AccessController.doPrivileged(
++            new PrivilegedAction<String>() {
++                public String run() {
++                    return System.getProperty(
++                        "auth.login.untieAccessContextWithTCCL");
++                }
++            }
++        ));
++
++
+     private void init(String name) throws LoginException {
+ 
+         SecurityManager sm = System.getSecurityManager();
+-        if (sm != null && !configProvided) {
++        if (sm != null && creatorAcc == null) {
+             sm.checkPermission(new AuthPermission
+                                 ("createLoginContext." + name));
+         }
+@@ -260,7 +274,7 @@
+         AppConfigurationEntry[] entries = config.getAppConfigurationEntry(name);
+         if (entries == null) {
+ 
+-            if (sm != null && !configProvided) {
++            if (sm != null && creatorAcc == null) {
+                 sm.checkPermission(new AuthPermission
+                                 ("createLoginContext." + OTHER));
+             }
+@@ -306,10 +320,10 @@
+                         (DEFAULT_HANDLER);
+                     if (defaultHandler == null || defaultHandler.length() == 0)
+                         return null;
+-                    Class c = Class.forName(defaultHandler,
+-                                        true,
+-                                        finalLoader);
+-                    return (CallbackHandler)c.newInstance();
++                    Class<? extends CallbackHandler> c = Class.forName(
++                            defaultHandler, true,
++                            finalLoader).asSubclass(CallbackHandler.class);
++                    return c.newInstance();
+                 }
+             });
+         } catch (java.security.PrivilegedActionException pae) {
+@@ -317,7 +331,7 @@
+         }
+ 
+         // secure it with the caller's ACC
+-        if (this.callbackHandler != null && !configProvided) {
++        if (this.callbackHandler != null && creatorAcc == null) {
+             this.callbackHandler = new SecureCallbackHandler
+                                 (java.security.AccessController.getContext(),
+                                 this.callbackHandler);
+@@ -506,8 +520,7 @@
+                         CallbackHandler callbackHandler,
+                         Configuration config) throws LoginException {
+         this.config = config;
+-        configProvided = (config != null) ? true : false;
+-        if (configProvided) {
++        if (config != null) {
+             creatorAcc = java.security.AccessController.getContext();
+         }
+ 
+@@ -518,7 +531,7 @@
+         }
+         if (callbackHandler == null) {
+             loadDefaultCallbackHandler();
+-        } else if (!configProvided) {
++        } else if (creatorAcc == null) {
+             this.callbackHandler = new SecureCallbackHandler
+                                 (java.security.AccessController.getContext(),
+                                 callbackHandler);
+@@ -585,23 +598,13 @@
+         }
+ 
+         try {
+-            if (configProvided) {
+-                // module invoked in doPrivileged with creatorAcc
+-                invokeCreatorPriv(LOGIN_METHOD);
+-                invokeCreatorPriv(COMMIT_METHOD);
+-            } else {
+-                // module invoked in doPrivileged
+-                invokePriv(LOGIN_METHOD);
+-                invokePriv(COMMIT_METHOD);
+-            }
++            // module invoked in doPrivileged
++            invokePriv(LOGIN_METHOD);
++            invokePriv(COMMIT_METHOD);
+             loginSucceeded = true;
+         } catch (LoginException le) {
+             try {
+-                if (configProvided) {
+-                    invokeCreatorPriv(ABORT_METHOD);
+-                } else {
+-                    invokePriv(ABORT_METHOD);
+-                }
++                invokePriv(ABORT_METHOD);
+             } catch (LoginException le2) {
+                 throw le;
+             }
+@@ -636,13 +639,8 @@
+                 ("null subject - logout called before login"));
+         }
+ 
+-        if (configProvided) {
+-            // module invoked in doPrivileged with creatorAcc
+-            invokeCreatorPriv(LOGOUT_METHOD);
+-        } else {
+-            // module invoked in doPrivileged
+-            invokePriv(LOGOUT_METHOD);
+-        }
++        // module invoked in doPrivileged
++        invokePriv(LOGOUT_METHOD);
+     }
+ 
+     /**
+@@ -685,7 +683,8 @@
+ 
+     /**
+      * Invokes the login, commit, and logout methods
+-     * from a LoginModule inside a doPrivileged block.
++     * from a LoginModule inside a doPrivileged block restricted
++     * by creatorAcc (may be null).
+      *
+      * This version is called if the caller did not instantiate
+      * the LoginContext with a Configuration object.
+@@ -698,29 +697,6 @@
+                     invoke(methodName);
+                     return null;
+                 }
+-            });
+-        } catch (java.security.PrivilegedActionException pae) {
+-            throw (LoginException)pae.getException();
+-        }
+-    }
+-
+-    /**
+-     * Invokes the login, commit, and logout methods
+-     * from a LoginModule inside a doPrivileged block restricted
+-     * by creatorAcc
+-     *
+-     * This version is called if the caller instantiated
+-     * the LoginContext with a Configuration object.
+-     */
+-    private void invokeCreatorPriv(final String methodName)
+-                throws LoginException {
+-        try {
+-            java.security.AccessController.doPrivileged
+-                (new java.security.PrivilegedExceptionAction<Void>() {
+-                public Void run() throws LoginException {
+-                    invoke(methodName);
+-                    return null;
+-                }
+             }, creatorAcc);
+         } catch (java.security.PrivilegedActionException pae) {
+             throw (LoginException)pae.getException();
+@@ -743,24 +719,30 @@
+                 } else {
+ 
+                     // instantiate the LoginModule
+-                    Class c = Class.forName
+-                                (moduleStack[i].entry.getLoginModuleName(),
++                    //
++                    // Allow any object to be a LoginModule as long as it
++                    // conforms to the interface if no customized config or
++                    // noPackageAccessWithTCCL is true.
++                    Class<?> c = Class.forName(
++                                moduleStack[i].entry.getLoginModuleName(),
+                                 true,
+                                 contextClassLoader);
++                    // check package access for customized config
++                    if (!noPackageAccessWithTCCL && creatorAcc != null) {
++                        c.asSubclass(javax.security.auth.spi.LoginModule.class);
++                        checkPackageAccess(c, creatorAcc);
++                    }
+ 
+                     Constructor constructor = c.getConstructor(PARAMS);
+                     Object[] args = { };
+-
+-                    // allow any object to be a LoginModule
+-                    // as long as it conforms to the interface
+                     moduleStack[i].module = constructor.newInstance(args);
+ 
++                    // call the LoginModule's initialize method
+                     methods = moduleStack[i].module.getClass().getMethods();
+-
+-                    // call the LoginModule's initialize method
+                     for (mIndex = 0; mIndex < methods.length; mIndex++) {
+-                        if (methods[mIndex].getName().equals(INIT_METHOD))
++                        if (methods[mIndex].getName().equals(INIT_METHOD)) {
+                             break;
++                        }
+                     }
+ 
+                     Object[] initArgs = {subject,
+@@ -768,19 +750,28 @@
+                                         state,
+                                         moduleStack[i].entry.getOptions() };
+                     // invoke the LoginModule initialize method
++                    //
++                    // Throws ArrayIndexOutOfBoundsException if no such
++                    // method defined.  May improve to use LoginException in
++                    // the future.
+                     methods[mIndex].invoke(moduleStack[i].module, initArgs);
+                 }
+ 
+                 // find the requested method in the LoginModule
+                 for (mIndex = 0; mIndex < methods.length; mIndex++) {
+-                    if (methods[mIndex].getName().equals(methodName))
++                    if (methods[mIndex].getName().equals(methodName)) {
+                         break;
++                    }
+                 }
+ 
+                 // set up the arguments to be passed to the LoginModule method
+                 Object[] args = { };
+ 
+                 // invoke the LoginModule method
++                //
++                // Throws ArrayIndexOutOfBoundsException if no such
++                // method defined.  May improve to use LoginException in
++                // the future.
+                 boolean status = ((Boolean)methods[mIndex].invoke
+                                 (moduleStack[i].module, args)).booleanValue();
+ 
+@@ -945,6 +936,35 @@
+     }
+ 
+     /**
++     * check package access of a class that is loaded with Thread Context
++     * Class Loader (TCCL) with specified access control context.
++     *
++     * Similar to java.lang.ClassLoader.checkPackageAccess()
++     */
++    static void checkPackageAccess(Class<?> cls, AccessControlContext context) {
++        final SecurityManager sm = System.getSecurityManager();
++        if (sm != null) {
++            if (ReflectUtil.isNonPublicProxyClass(cls)) {
++                for (Class<?> intf: cls.getInterfaces()) {
++                    checkPackageAccess(intf, context);
++                }
++                return;
++            }
++
++            final String name = cls.getName();
++            final int i = name.lastIndexOf('.');
++            if (i != -1) {
++                AccessController.doPrivileged(new PrivilegedAction<Void>() {
++                    public Void run() {
++                        sm.checkPackageAccess(name.substring(0, i));
++                        return null;
++                    }
++                }, context);
++            }
++        }
++    }
++
++    /**
+      * Wrap the caller-specified CallbackHandler in our own
+      * and invoke it within a privileged block, constrained by
+      * the caller's AccessControlContext.

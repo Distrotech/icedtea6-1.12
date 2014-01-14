@@ -1,0 +1,132 @@
+# HG changeset patch
+# User xuelei
+# Date 1381800940 25200
+#      Mon Oct 14 18:35:40 2013 -0700
+# Node ID d6b926b610d956b000045f41e469555a2e241ea7
+# Parent  6f78aa03ae3c195be644e61a28ee2ea311588afa
+8025026: Enhance canonicalization
+Summary: Don't use cached null xmlns definition. Also reviewed by Alexander Fomin <alexander.fomin@oracle.com>
+Reviewed-by: mullan, hawtin
+
+diff -Nru openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer11.java openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer11.java
+--- openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer11.java
++++ openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer11.java
+@@ -358,7 +358,8 @@
+             } else if (!isVisible(xmlns)) {
+                 // There is a defn but the xmlns is not selected by the xpath.
+                 // then xmlns=""
+-                n = ns.addMappingAndRender(XMLNS, "", nullNode);
++                n = ns.addMappingAndRender(XMLNS, "",
++                        getNullNode(xmlns.getOwnerDocument()));
+             }
+             // output the xmlns def if needed.
+             if (n != null) {
+diff -Nru openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer20010315.java openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer20010315.java
+--- openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer20010315.java
++++ openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer20010315.java
+@@ -302,7 +302,8 @@
+         } else if ( !isVisible(xmlns)) {
+                 //There is a definition but the xmlns is not selected by the xpath.
+                 //then xmlns=""
+-                n=ns.addMappingAndRender(XMLNS,"",nullNode);
++                n=ns.addMappingAndRender(XMLNS, "",
++                        getNullNode(xmlns.getOwnerDocument()));
+         }
+         //output the xmlns def if needed.
+         if (n!=null) {
+diff -Nru openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer20010315Excl.java openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer20010315Excl.java
+--- openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer20010315Excl.java
++++ openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/Canonicalizer20010315Excl.java
+@@ -300,7 +300,7 @@
+            if ((xmlns!=null) &&  (!isVisible(xmlns))) {
+               //There is a definition but the xmlns is not selected by the xpath.
+               //then xmlns=""
+-              ns.addMapping(XMLNS,"",nullNode);
++              ns.addMapping(XMLNS, "", getNullNode(xmlns.getOwnerDocument()));
+             }
+ 
+                         if (E.getNamespaceURI() != null) {
+diff -Nru openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/CanonicalizerBase.java openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/CanonicalizerBase.java
+--- openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/CanonicalizerBase.java
++++ openjdk/jdk/src/share/classes/com/sun/org/apache/xml/internal/security/c14n/implementations/CanonicalizerBase.java
+@@ -34,7 +34,6 @@
+ import java.util.Map;
+ import java.util.Set;
+ 
+-import javax.xml.parsers.DocumentBuilderFactory;
+ import javax.xml.parsers.ParserConfigurationException;
+ 
+ import com.sun.org.apache.xml.internal.security.c14n.CanonicalizationException;
+@@ -48,6 +47,7 @@
+ import org.w3c.dom.Attr;
+ import org.w3c.dom.Comment;
+ import org.w3c.dom.Element;
++import org.w3c.dom.Document;
+ import org.w3c.dom.NamedNodeMap;
+ import org.w3c.dom.Node;
+ import org.w3c.dom.ProcessingInstruction;
+@@ -86,22 +86,10 @@
+    static final int NODE_BEFORE_DOCUMENT_ELEMENT = -1;
+    static final int NODE_NOT_BEFORE_OR_AFTER_DOCUMENT_ELEMENT = 0;
+    static final int NODE_AFTER_DOCUMENT_ELEMENT = 1;
+-   //The null xmlns definiton.
+-   protected static final Attr nullNode;
+-   static {
+-    try {
+-        nullNode=DocumentBuilderFactory.newInstance().
+-            newDocumentBuilder().newDocument().createAttributeNS(Constants.NamespaceSpecNS,XMLNS);
+-        nullNode.setValue("");
+-    } catch (Exception e) {
+-        throw new RuntimeException("Unable to create nullNode"/*,*/+e);
+-    }
+-   }
+-
+    List nodeFilter;
+-
+    boolean _includeComments;
+    Set<Node> _xpathNodeSet = null;
++
+    /**
+     * The node to be skiped/excluded from the DOM tree
+     * in subtree canonicalizations.
+@@ -110,6 +98,11 @@
+    OutputStream _writer = new UnsyncByteArrayOutputStream();//null;
+ 
+    /**
++    * The null xmlns definition.
++    */
++   private Attr nullNode;
++
++   /**
+     * Constructor CanonicalizerBase
+     *
+     * @param includeComments
+@@ -613,7 +606,8 @@
+         Attr nsprefix;
+         if (((nsprefix=ns.getMappingWithoutRendered("xmlns"))!=null)
+                 && "".equals(nsprefix.getValue())) {
+-             ns.addMappingAndRender("xmlns","",nullNode);
++             ns.addMappingAndRender("xmlns", "",
++                        getNullNode(nsprefix.getOwnerDocument()));
+         }
+         }
+    /**
+@@ -841,4 +835,18 @@
+               }
+            }
+ 
++    // The null xmlns definition.
++    protected Attr getNullNode(Document ownerDocument) {
++        if (nullNode == null) {
++            try {
++                nullNode = ownerDocument.createAttributeNS(
++                                    Constants.NamespaceSpecNS, XMLNS);
++                nullNode.setValue("");
++            } catch (Exception e) {
++                throw new RuntimeException("Unable to create nullNode: " + e);
++            }
++        }
++        return nullNode;
++    }
++
+ }

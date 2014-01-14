@@ -1,0 +1,66 @@
+# HG changeset patch
+# User weijun
+# Date 1376923412 -28800
+#      Mon Aug 19 22:43:32 2013 +0800
+# Node ID 3bbfb1248ffef586f26d6292f4492a182133b91c
+# Parent  76445081396e1ba3ccf4a800011bd306b424a7d3
+8022945: Enhance JNDI implementation classes
+Reviewed-by: xuelei, ahgross, skoivu
+
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-linux openjdk/jdk/src/share/lib/security/java.security-linux
+--- openjdk/jdk/src/share/lib/security/java.security-linux
++++ openjdk/jdk/src/share/lib/security/java.security-linux
+@@ -152,6 +152,7 @@
+                com.sun.org.apache.xml.internal.utils.,\
+                com.sun.org.apache.xml.internal.security.,\
+                com.sun.org.glassfish.,\
++               com.sun.naming.internal.,\
+                org.jcp.xml.dsig.internal.
+ 
+ #
+@@ -189,6 +190,7 @@
+                    com.sun.org.apache.xml.internal.utils.,\
+                    com.sun.org.apache.xml.internal.security.,\
+                    com.sun.org.glassfish.,\
++                   com.sun.naming.internal.,\
+                    org.jcp.xml.dsig.internal.
+ 
+ #
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-solaris openjdk/jdk/src/share/lib/security/java.security-solaris
+--- openjdk/jdk/src/share/lib/security/java.security-solaris
++++ openjdk/jdk/src/share/lib/security/java.security-solaris
+@@ -154,6 +154,7 @@
+                com.sun.org.apache.xml.internal.utils.,\
+                com.sun.org.apache.xml.internal.security.,\
+                com.sun.org.glassfish.,\
++               com.sun.naming.internal.,\
+                org.jcp.xml.dsig.internal.
+ 
+ #
+@@ -191,6 +192,7 @@
+                    com.sun.org.apache.xml.internal.utils.,\
+                    com.sun.org.apache.xml.internal.security.,\
+                    com.sun.org.glassfish.,\
++                   com.sun.naming.internal.,\
+                    org.jcp.xml.dsig.internal.
+ 
+ #
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-windows openjdk/jdk/src/share/lib/security/java.security-windows
+--- openjdk/jdk/src/share/lib/security/java.security-windows
++++ openjdk/jdk/src/share/lib/security/java.security-windows
+@@ -154,6 +154,7 @@
+                com.sun.org.apache.xml.internal.utils.,\
+                com.sun.org.apache.xml.internal.security.,\
+                com.sun.org.glassfish.,\
++               com.sun.naming.internal.,\
+                org.jcp.xml.dsig.internal.\
+                com.sun.java.accessibility.
+ 
+@@ -192,6 +193,7 @@
+                    com.sun.org.apache.xml.internal.utils.,\
+                    com.sun.org.apache.xml.internal.security.,\
+                    com.sun.org.glassfish.,\
++                   com.sun.naming.internal.,\
+                    org.jcp.xml.dsig.internal.\
+                    com.sun.java.accessibility.
+ 

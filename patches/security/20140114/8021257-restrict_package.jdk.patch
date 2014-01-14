@@ -1,0 +1,78 @@
+# HG changeset patch
+# User alanb
+# Date 1382638912 -3600
+#      Thu Oct 24 19:21:52 2013 +0100
+# Node ID 322107c84c6d96944c624b348303aedfd5f2c0b3
+# Parent  3bbfb1248ffef586f26d6292f4492a182133b91c
+8021257: com.sun.corba.se.** should be on restricted package list
+Reviewed-by: chegar, coffeys, smarks
+Contributed-by: alan.bateman@oracle.com, mark.sheppard@oracle.com
+
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-linux openjdk/jdk/src/share/lib/security/java.security-linux
+--- openjdk/jdk/src/share/lib/security/java.security-linux
++++ openjdk/jdk/src/share/lib/security/java.security-linux
+@@ -133,6 +133,7 @@
+                com.sun.istack.internal.,\
+                com.sun.jmx.,\
+                com.sun.proxy.,\
++               com.sun.corba.se.,\
+                com.sun.script.,\
+                com.sun.org.apache.bcel.internal.,\
+                com.sun.org.apache.regexp.internal.,\
+@@ -171,6 +172,7 @@
+                    com.sun.istack.internal.,\
+                    com.sun.jmx.,\
+                    com.sun.proxy.,\
++                   com.sun.corba.se.,\
+                    com.sun.script.,\
+                    com.sun.org.apache.bcel.internal.,\
+                    com.sun.org.apache.regexp.internal.,\
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-solaris openjdk/jdk/src/share/lib/security/java.security-solaris
+--- openjdk/jdk/src/share/lib/security/java.security-solaris
++++ openjdk/jdk/src/share/lib/security/java.security-solaris
+@@ -134,6 +134,7 @@
+                com.sun.istack.internal.,\
+                com.sun.jmx.,\
+                com.sun.proxy.,\
++               com.sun.corba.se.,\
+                com.sun.script.,\
+                com.sun.org.apache.bcel.internal.,\
+                com.sun.org.apache.regexp.internal.,\
+@@ -173,6 +174,7 @@
+                    com.sun.istack.internal.,\
+                    com.sun.jmx.,\
+                    com.sun.proxy.,\
++                   com.sun.corba.se.,\
+                    com.sun.script.,\
+                    com.sun.org.apache.bcel.internal.,\
+                    com.sun.org.apache.regexp.internal.,\
+diff -Nru openjdk/jdk/src/share/lib/security/java.security-windows openjdk/jdk/src/share/lib/security/java.security-windows
+--- openjdk/jdk/src/share/lib/security/java.security-windows
++++ openjdk/jdk/src/share/lib/security/java.security-windows
+@@ -134,6 +134,7 @@
+                com.sun.istack.internal.,\
+                com.sun.jmx.,\
+                com.sun.proxy.,\
++               com.sun.corba.se.,\
+                com.sun.script.,\
+                com.sun.org.apache.bcel.internal.,\
+                com.sun.org.apache.regexp.internal.,\
+@@ -174,6 +175,7 @@
+                    com.sun.istack.internal.,\
+                    com.sun.jmx.,\
+                    com.sun.proxy.,\
++                   com.sun.corba.se.,\
+                    com.sun.script.,\
+                    com.sun.org.apache.bcel.internal.,\
+                    com.sun.org.apache.regexp.internal.,\
+diff -Nru openjdk/jdk/test/java/lang/SecurityManager/CheckPackageAccess.java openjdk/jdk/test/java/lang/SecurityManager/CheckPackageAccess.java
+--- openjdk/jdk/test/java/lang/SecurityManager/CheckPackageAccess.java
++++ openjdk/jdk/test/java/lang/SecurityManager/CheckPackageAccess.java
+@@ -55,6 +55,7 @@
+         "com.sun.istack.internal.",
+         "com.sun.jmx.",
+         "com.sun.proxy.",
++        "com.sun.corba.se.",
+         "com.sun.org.apache.bcel.internal.",
+         "com.sun.org.apache.regexp.internal.",
+         "com.sun.org.apache.xerces.internal.",

@@ -535,7 +535,40 @@ SECURITY_PATCHES = \
 	patches/openjdk/8003992-embedded_nulls.patch \
 	patches/openjdk/8013827-createtempfile_hang.patch \
 	patches/openjdk/8025128-createtempfile_absolute_prefix.patch \
-	patches/openjdk/oj6-21-overrides.patch
+	patches/openjdk/oj6-21-overrides.patch \
+	patches/security/20140114/6995424-deprecated_dependency.patch \
+	patches/security/20140114/7068126-snmp_status.patch \
+	patches/openjdk//8009530-icu_kern_table_support_broken.patch \
+	patches/security/20140114/8010935-xml_handling.patch \
+	patches/security/20140114/8011786-networking.patch \
+	patches/security/20140114/8021257-restrict_package.corba.patch \
+	patches/security/20140114/8021257-restrict_package.jdk.patch \
+	patches/security/20140114/8022904-jdbc.patch \
+	patches/security/20140114/8022927-conversions.patch \
+	patches/security/20140114/8022935-resolver_classes.patch \
+	patches/security/20140114/8022945-jndi.patch \
+	patches/security/20140114/8023057-splashscreen.patch \
+	patches/security/20140114/8023069-tls.patch \
+	patches/security/20140114/8023245-beans_decoding.patch \
+	patches/security/20140114/8023301-generic_classes.patch \
+	patches/security/20140114/8023672-jar_validation.patch \
+	patches/security/20140114/8024306-subject_consistency.patch \
+	patches/security/20140114/8024530-font_process.patch \
+	patches/security/20140114/8024867-logging.patch \
+	patches/security/20140114/8025014-security_policy.patch \
+	patches/security/20140114/8025018-jaxp_setup.patch \
+	patches/security/20140114/8025026-canonicalization.patch \
+	patches/security/20140114/8025034-layout_lookups.patch \
+	patches/security/20140114/8025448-swing_listening.patch \
+	patches/security/20140114/8025758-naming.patch \
+	patches/security/20140114/8025767-corba_iiop_streams.patch \
+	patches/security/20140114/8026172-ui_management.patch \
+	patches/security/20140114/8026176-document_printing.patch \
+	patches/security/20140114/8026193-corba_stub_factories.patch \
+	patches/security/20140114/8026204-auth_login_contexts.patch \
+	patches/security/20140114/8026417-xml_canonicalization.patch \
+	patches/security/20140114/8026826-fix_build.patch \
+	patches/security/20140114/8027201-jaxp_setup.patch
 
 SPECIAL_SECURITY_PATCH_1 = patches/security/20120214/7112642.patch
 SPECIAL_SECURITY_PATCH_2 = patches/security/20130618/8009071-improve_shape_handling.patch
@@ -779,7 +812,6 @@ ICEDTEA_PATCHES = \
 	patches/aarch64.patch \
 	patches/jaxws-tempfiles-ioutils-6.patch \
 	patches/object-factory-cl-internal.patch \
-	patches/openjdk/8009530-icu_kern_table_support_broken.patch \
 	patches/openjdk/7171223-strict_aliasing.patch \
 	patches/openjdk/8009165-inappropriate_method_in_reflectutil.patch \
 	patches/openjdk/8009217-fix_test_compile.patch \

@@ -1,0 +1,372 @@
+# HG changeset patch
+# User sjiang
+# Date 1382370476 -7200
+#      Mon Oct 21 17:47:56 2013 +0200
+# Node ID 20009f68c21c45adbfa44a561746db51e4a2c6be
+# Parent  956e1047786a3c265bcd0d41b49554201bffb781
+7068126: Enhance SNMP statuses
+Reviewed-by: dfuchs, hawtin
+
+diff -Nru openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibEntry.java openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibEntry.java
+--- openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibEntry.java
++++ openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibEntry.java
+@@ -27,17 +27,9 @@
+ 
+ // java imports
+ //
++import com.sun.jmx.snmp.SnmpDefinitions;
+ import java.io.Serializable;
+-import java.util.Hashtable;
+-import java.util.Enumeration;
+-
+-// jmx imports
+-//
+-import com.sun.jmx.snmp.SnmpValue;
+-import com.sun.jmx.snmp.SnmpVarBind;
+ import com.sun.jmx.snmp.SnmpStatusException;
+-import com.sun.jmx.snmp.agent.SnmpMibOid;
+-import com.sun.jmx.snmp.agent.SnmpMibNode;
+ 
+ /**
+  * Represents a node in an SNMP MIB which corresponds to a table entry
+@@ -99,7 +91,7 @@
+      */
+     public void validateVarId(long arc, Object userData)
+         throws SnmpStatusException {
+-        if (isVariable(arc) == false) throw noSuchNameException;
++        if (isVariable(arc) == false) throw new SnmpStatusException(SnmpDefinitions.snmpRspNoSuchName);
+     }
+ 
+     /**
+diff -Nru openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibGroup.java openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibGroup.java
+--- openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibGroup.java
++++ openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibGroup.java
+@@ -116,7 +116,7 @@
+     public void validateVarId(long arc, Object userData)
+         throws SnmpStatusException {
+         if (isVariable(arc) == false)
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+     }
+ 
+ 
+@@ -365,16 +365,16 @@
+ 
+             // The trailing .0 is missing in the OID
+             if (depth+2 > length)
+-                throw noSuchInstanceException;
++                throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+ 
+             // There are too many arcs left in the OID (there should remain
+             // a single trailing .0)
+             if (depth+2 < length)
+-                throw noSuchInstanceException;
++                throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+ 
+             // The last trailing arc is not .0
+             if (oid[depth+1] != 0L)
+-                throw noSuchInstanceException;
++                throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+ 
+             // It's one of our variable, register this node.
+             handlers.add(this,depth,varbind);
+@@ -397,7 +397,7 @@
+             // abort the whole request, so we're going to throw
+             // a noSuchObject...
+             //
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         final Object data = handlers.getUserData();
+         final int pduVersion = handlers.getRequestPduVersion();
+@@ -433,7 +433,7 @@
+                                                         depth+1,handlers,
+                                                         checker);
+                 }catch(SnmpStatusException ex) {
+-                    throw noSuchObjectException;
++                    throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+                 } finally {
+                     checker.remove(depth);
+                 }
+@@ -458,7 +458,7 @@
+                     try {
+                         checker.checkCurrentOid();
+                     } catch(SnmpStatusException e) {
+-                        throw noSuchObjectException;
++                        throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+                     } finally {
+                         checker.remove(depth,2);
+                     }
+@@ -503,7 +503,7 @@
+             // The oid is not valid, we will throw an exception in order
+             // to try with the next valid identifier...
+             //
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         } catch (SnmpStatusException e) {
+             // We didn't find anything at the given arc, so we're going
+diff -Nru openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibNode.java openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibNode.java
+--- openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibNode.java
++++ openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibNode.java
+@@ -155,7 +155,7 @@
+                           long[] oid, int depth,
+                           SnmpRequestTree handlers)
+         throws SnmpStatusException {
+-        throw noSuchObjectException;
++        throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+     }
+ 
+     /**
+@@ -183,7 +183,7 @@
+                                  long[] oid, int pos, int depth,
+                                  SnmpRequestTree handlers, AcmChecker checker)
+         throws SnmpStatusException {
+-        throw noSuchObjectException;
++        throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+     }
+ 
+     /**
+@@ -347,7 +347,7 @@
+         final int val= (int) value;
+ 
+         if (a == null)
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         int low= 0;
+         int max= a.length;
+@@ -357,10 +357,10 @@
+         // Basic check
+         //
+         if (max < 1)
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         if (a[max-1] <= val)
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         while (low <= max) {
+             elmt= a[curr];
+@@ -400,15 +400,4 @@
+      * Contains the list of variable identifiers.
+      */
+     protected int[] varList;
+-
+-    /**
+-     * Contains a predefined exception that is often fired when an
+-     * object is not found in the MIB.
+-     */
+-    static final protected SnmpStatusException noSuchInstanceException =
+-        new SnmpStatusException(SnmpStatusException.noSuchInstance);
+-    static final protected SnmpStatusException noSuchObjectException =
+-        new SnmpStatusException(SnmpStatusException.noSuchObject);
+-    static final protected SnmpStatusException noSuchNameException =
+-        new SnmpStatusException(SnmpDefinitions.snmpRspNoSuchName);
+ }
+diff -Nru openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibOid.java openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibOid.java
+--- openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibOid.java
++++ openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibOid.java
+@@ -157,11 +157,11 @@
+ 
+         if (depth > length) {
+             // Nothing is left... the oid is not valid
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         } else if (depth == length) {
+             // The oid is not complete...
+-            throw noSuchInstanceException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+ 
+         } else {
+             // Some children variable or subobject is being querried
+@@ -206,7 +206,7 @@
+             // abort the whole request, so we're going to throw
+             // a noSuchObject...
+             //
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         final Object data = handlers.getUserData();
+         final int pduVersion = handlers.getRequestPduVersion();
+@@ -231,7 +231,7 @@
+                 // SnmpOid result = null;
+                 if (child == null) {
+                     // shouldn't happen
+-                    throw noSuchObjectException;
++                    throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+                     // validateVarId(index);
+                     // handlers.add(this,varbind,depth);
+                     // result = new SnmpOid(0);
+@@ -442,10 +442,10 @@
+         //
+         final int pos= getInsertAt(id);
+         if (pos >= nbChildren)
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         if (varList[pos] != (int) id)
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+         // Access the node
+         //
+@@ -453,10 +453,10 @@
+         try {
+             child = children.elementAtNonSync(pos);
+         } catch(ArrayIndexOutOfBoundsException e) {
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+         }
+         if (child == null)
+-            throw noSuchInstanceException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+         return child;
+     }
+ 
+diff -Nru openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibTable.java openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibTable.java
+--- openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibTable.java
++++ openjdk/jdk/src/share/classes/com/sun/jmx/snmp/agent/SnmpMibTable.java
+@@ -279,7 +279,7 @@
+             SnmpVarBind     var = null;
+             for (Enumeration e= r.getElements(); e.hasMoreElements();) {
+                 var      = (SnmpVarBind) e.nextElement();
+-                r.registerGetException(var,noSuchInstanceException);
++                r.registerGetException(var,new SnmpStatusException(SnmpStatusException.noSuchInstance));
+             }
+         }
+ 
+@@ -1607,7 +1607,7 @@
+         throws SnmpStatusException {
+ 
+         if (size == 0)
+-            throw noSuchInstanceException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+ 
+         final SnmpOid resOid = oid;
+ 
+@@ -1618,7 +1618,7 @@
+         if (last.equals(resOid)) {
+             // Last element of the table ...
+             //
+-            throw noSuchInstanceException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+         }
+ 
+         // First find the oid. This will allow to speed up retrieval process
+@@ -1640,12 +1640,12 @@
+                 // XX last = (SnmpOid) oids.elementAt(newPos);
+                 last = tableoids[newPos];
+             } catch(ArrayIndexOutOfBoundsException e) {
+-                throw noSuchInstanceException;
++                throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+             }
+         } else {
+             // We are dealing with the last element of the table ..
+             //
+-            throw noSuchInstanceException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+         }
+ 
+ 
+@@ -1668,7 +1668,7 @@
+     protected SnmpOid getNextOid(Object userData)
+         throws SnmpStatusException {
+         if (size == 0)
+-            throw noSuchInstanceException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+         // XX return (SnmpOid) oids.firstElement();
+         return tableoids[0];
+     }
+@@ -1875,7 +1875,7 @@
+         if (!hasEntry) {
+             if (!handlers.isCreationAllowed())
+                 // we're not doing a set
+-                throw noSuchInstanceException;
++                throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+             else if (!isCreationEnabled())
+                 // we're doing a set but creation is disabled.
+                 throw new
+@@ -1921,7 +1921,7 @@
+             // abort the whole request, so we're going to throw
+             // a noSuchObject...
+             //
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+             final Object data = handlers.getUserData();
+             final int pduVersion = handlers.getRequestPduVersion();
+@@ -1955,7 +1955,7 @@
+                 // so we won't find the next element in this table... (any
+                 // element in this table will have a smaller OID)
+                 //
+-                throw noSuchObjectException;
++                throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+             } else if (oid[pos] < nodeId) {
+                 // we must return the first leaf under the first columnar
+                 // object, so we are back to our first case where pos was
+@@ -2046,7 +2046,7 @@
+                     //     must have the same holes)
+                     //
+                     if (skipEntryVariable(entryoid,var,data,pduVersion))
+-                        throw noSuchObjectException;
++                        throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+                 } catch(SnmpStatusException se) {
+                     entryoid = getNextOid(data);
+                     var = getNextVarEntryId(entryoid,var,data,pduVersion);
+@@ -2079,7 +2079,7 @@
+             // So we throw the exception.
+             // => will skip to next node in the MIB tree.
+             //
+-            if (entryoid == null || var == -1 ) throw noSuchObjectException;
++            if (entryoid == null || var == -1 ) throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+ 
+             // So here we know both the row (entryoid) and the column (var)
+@@ -2092,7 +2092,7 @@
+                 // other entry => skip to next column.
+                 //
+                 if (!isReadableEntryId(entryoid,var,data))
+-                    throw noSuchObjectException;
++                    throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+                 // Prepare the result and the ACM checker.
+                 //
+@@ -2156,7 +2156,7 @@
+             // => will skip to next node in the MIB tree.
+             //
+             if (entryoid == null || var == -1 )
+-                throw noSuchObjectException;
++                throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+         }
+     }
+ 
+@@ -2177,12 +2177,12 @@
+         // Control the length of the oid
+         //
+         if (pos +2 >= length)
+-            throw noSuchInstanceException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchInstance);
+ 
+         // Check that the entry identifier is specified
+         //
+         if (oid[pos] != nodeId)
+-            throw noSuchObjectException;
++            throw new SnmpStatusException(SnmpStatusException.noSuchObject);
+ 
+     }
+ 
+diff -Nru openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/daemon/SnmpRequestHandler.java openjdk/jdk/src/share/classes/com/sun/jmx/snmp/daemon/SnmpRequestHandler.java
+--- openjdk.orig/jdk/src/share/classes/com/sun/jmx/snmp/daemon/SnmpRequestHandler.java
++++ openjdk/jdk/src/share/classes/com/sun/jmx/snmp/daemon/SnmpRequestHandler.java
+@@ -1146,7 +1146,4 @@
+ 
+     static final private String InterruptSysCallMsg =
+         "Interrupted system call";
+-
+-    static final private SnmpStatusException noSuchNameException =
+-        new SnmpStatusException(SnmpDefinitions.snmpRspNoSuchName) ;
+ }
+

@@ -1,0 +1,2933 @@
+# HG changeset patch
+# User prr
+# Date 1382274728 25200
+#      Sun Oct 20 06:12:08 2013 -0700
+# Node ID 9d4e84bf8c0d6f4d5b538e68b7b4f64b2787a847
+# Parent  2cf3d83c5c6b0d64f2c66161fd9b2d789ffef5f9
+8024530: Enhance font process resilience
+Reviewed-by: mschoene, bae, srl, prr
+
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/AlternateSubstSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/AlternateSubstSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/AlternateSubstSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/AlternateSubstSubtables.cpp
+@@ -55,7 +55,7 @@
+                                   (const AlternateSetTable *) ((char *) this + alternateSetTableOffset));
+             TTGlyphID alternate = SWAPW(alternateSetTable->alternateArray[0]);
+ 
+-            if (filter == NULL || filter->accept(LE_SET_GLYPH(glyph, alternate))) {
++            if (filter == NULL || filter->accept(LE_SET_GLYPH(glyph, alternate), success)) {
+                 glyphIterator->setCurrGlyphID(SWAPW(alternateSetTable->alternateArray[0]));
+             }
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/AnchorTables.cpp openjdk/jdk/src/share/native/sun/font/layout/AnchorTables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/AnchorTables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/AnchorTables.cpp
+@@ -37,55 +37,54 @@
+ 
+ U_NAMESPACE_BEGIN
+ 
+-void AnchorTable::getAnchor(LEGlyphID glyphID, const LEFontInstance *fontInstance,
+-                            LEPoint &anchor) const
++void AnchorTable::getAnchor(const LETableReference &base, LEGlyphID glyphID, const LEFontInstance *fontInstance,
++                            LEPoint &anchor, LEErrorCode &success) const
+ {
+     switch(SWAPW(anchorFormat)) {
+     case 1:
+     {
+-        const Format1AnchorTable *f1 = (const Format1AnchorTable *) this;
+-
+-        f1->getAnchor(fontInstance, anchor);
++        LEReferenceTo<Format1AnchorTable> f1(base, success);
++        f1->getAnchor(f1, fontInstance, anchor, success);
+         break;
+     }
+ 
+     case 2:
+     {
+-        const Format2AnchorTable *f2 = (const Format2AnchorTable *) this;
+-
+-        f2->getAnchor(glyphID, fontInstance, anchor);
++        LEReferenceTo<Format2AnchorTable> f2(base, success);
++        f2->getAnchor(f2, glyphID, fontInstance, anchor, success);
+         break;
+     }
+ 
+     case 3:
+     {
+-        const Format3AnchorTable *f3 = (const Format3AnchorTable *) this;
+-
+-        f3->getAnchor(fontInstance, anchor);
++        LEReferenceTo<Format3AnchorTable> f3(base, success);
++        f3->getAnchor(f3, fontInstance, anchor, success);
+         break;
+     }
+ 
+     default:
++    {
+         // unknown format: just use x, y coordinate, like format 1...
+-        const Format1AnchorTable *f1 = (const Format1AnchorTable *) this;
+-
+-        f1->getAnchor(fontInstance, anchor);
++        LEReferenceTo<Format1AnchorTable> f1(base, success);
++        f1->getAnchor(f1, fontInstance, anchor, success);
+         break;
+     }
+ }
++}
+ 
+-void Format1AnchorTable::getAnchor(const LEFontInstance *fontInstance, LEPoint &anchor) const
++void Format1AnchorTable::getAnchor(const LEReferenceTo<Format1AnchorTable>& base, const LEFontInstance *fontInstance, LEPoint &anchor, LEErrorCode &success) const
+ {
+     le_int16 x = SWAPW(xCoordinate);
+     le_int16 y = SWAPW(yCoordinate);
+     LEPoint pixels;
+ 
+     fontInstance->transformFunits(x, y, pixels);
+-
+     fontInstance->pixelsToUnits(pixels, anchor);
+ }
+ 
+-void Format2AnchorTable::getAnchor(LEGlyphID glyphID, const LEFontInstance *fontInstance, LEPoint &anchor) const
++void Format2AnchorTable::getAnchor(const LEReferenceTo<Format2AnchorTable>& base,
++                                   LEGlyphID glyphID, const LEFontInstance *fontInstance, LEPoint &anchor
++                                   , LEErrorCode &success) const
+ {
+     LEPoint point;
+ 
+@@ -100,7 +99,8 @@
+     fontInstance->pixelsToUnits(point, anchor);
+ }
+ 
+-void Format3AnchorTable::getAnchor(const LEFontInstance *fontInstance, LEPoint &anchor) const
++void Format3AnchorTable::getAnchor(const LEReferenceTo<Format3AnchorTable> &base, const LEFontInstance *fontInstance,
++                                   LEPoint &anchor, LEErrorCode &success) const
+ {
+     le_int16 x = SWAPW(xCoordinate);
+     le_int16 y = SWAPW(yCoordinate);
+@@ -111,15 +111,15 @@
+     fontInstance->transformFunits(x, y, pixels);
+ 
+     if (dtxOffset != 0) {
+-        const DeviceTable *dtx = (const DeviceTable *) ((char *) this + dtxOffset);
+-        le_int16 adjx = dtx->getAdjustment((le_int16) fontInstance->getXPixelsPerEm());
++        LEReferenceTo<DeviceTable> dt(base, success, dtxOffset);
++        le_int16 adjx = dt->getAdjustment(dt, (le_int16) fontInstance->getXPixelsPerEm(), success);
+ 
+         pixels.fX += adjx;
+     }
+ 
+     if (dtyOffset != 0) {
+-        const DeviceTable *dty = (const DeviceTable *) ((char *) this + dtyOffset);
+-        le_int16 adjy = dty->getAdjustment((le_int16) fontInstance->getYPixelsPerEm());
++        LEReferenceTo<DeviceTable> dt(base, success, dtyOffset);
++        le_int16 adjy = dt->getAdjustment(dt, (le_int16) fontInstance->getYPixelsPerEm(), success);
+ 
+         pixels.fY += adjy;
+     }
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/AnchorTables.h openjdk/jdk/src/share/native/sun/font/layout/AnchorTables.h
+--- openjdk/jdk/src/share/native/sun/font/layout/AnchorTables.h
++++ openjdk/jdk/src/share/native/sun/font/layout/AnchorTables.h
+@@ -49,20 +49,23 @@
+     le_int16   xCoordinate;
+     le_int16   yCoordinate;
+ 
+-    void    getAnchor(LEGlyphID glyphID, const LEFontInstance *fontInstance,
+-                      LEPoint &anchor) const;
++  void    getAnchor(const LETableReference &base, LEGlyphID glyphID, const LEFontInstance *fontInstance,
++                      LEPoint &anchor, LEErrorCode &success) const;
+ };
+ 
+ struct Format1AnchorTable : AnchorTable
+ {
+-    void getAnchor(const LEFontInstance *fontInstance, LEPoint &anchor) const;
++  void getAnchor(const LEReferenceTo<Format1AnchorTable>& base,
++                 const LEFontInstance *fontInstance, LEPoint &anchor, LEErrorCode &success) const;
+ };
+ 
+ struct Format2AnchorTable : AnchorTable
+ {
+     le_uint16  anchorPoint;
+ 
+-    void getAnchor(LEGlyphID glyphID, const LEFontInstance *fontInstance, LEPoint &anchor) const;
++    void getAnchor(const LEReferenceTo<Format2AnchorTable>& base,
++                   LEGlyphID glyphID, const LEFontInstance *fontInstance,
++                   LEPoint &anchor, LEErrorCode &success) const;
+ };
+ 
+ struct Format3AnchorTable : AnchorTable
+@@ -70,7 +73,9 @@
+     Offset  xDeviceTableOffset;
+     Offset  yDeviceTableOffset;
+ 
+-    void getAnchor(const LEFontInstance *fontInstance, LEPoint &anchor) const;
++    void getAnchor(const LEReferenceTo<Format3AnchorTable>& base,
++                   const LEFontInstance *fontInstance, LEPoint &anchor,
++                   LEErrorCode &success) const;
+ };
+ 
+ U_NAMESPACE_END
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ArabicLayoutEngine.cpp openjdk/jdk/src/share/native/sun/font/layout/ArabicLayoutEngine.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/ArabicLayoutEngine.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/ArabicLayoutEngine.cpp
+@@ -51,7 +51,7 @@
+ 
+ U_NAMESPACE_BEGIN
+ 
+-le_bool CharSubstitutionFilter::accept(LEGlyphID glyph) const
++le_bool CharSubstitutionFilter::accept(LEGlyphID glyph, LEErrorCode &/*success*/) const
+ {
+     return fFontInstance->canDisplay((LEUnicode) glyph);
+ }
+@@ -147,7 +147,9 @@
+         GDEFMarkFilter filter(fGDEFTable, success);
+         adjustMarkGlyphs(glyphStorage, &filter, success);
+     } else {
+-        LEReferenceTo<GlyphDefinitionTableHeader> gdefTable(CanonShaping::glyphDefinitionTable, CanonShaping::glyphDefinitionTableLen);
++      LEReferenceTo<GlyphDefinitionTableHeader> gdefTable(LETableReference::kStaticData,
++                                                          CanonShaping::glyphDefinitionTable,
++                                                          CanonShaping::glyphDefinitionTableLen);
+         GDEFMarkFilter filter(gdefTable, success);
+ 
+         adjustMarkGlyphs(&chars[offset], count, reverse, glyphStorage, &filter, success);
+@@ -157,8 +159,8 @@
+ UnicodeArabicOpenTypeLayoutEngine::UnicodeArabicOpenTypeLayoutEngine(const LEFontInstance *fontInstance, le_int32 scriptCode, le_int32 languageCode, le_int32 typoFlags, LEErrorCode &success)
+   : ArabicOpenTypeLayoutEngine(fontInstance, scriptCode, languageCode, typoFlags | LE_CHAR_FILTER_FEATURE_FLAG, success)
+ {
+-    fGSUBTable = (const GlyphSubstitutionTableHeader *) CanonShaping::glyphSubstitutionTable;
+-    fGDEFTable = (const GlyphDefinitionTableHeader *) CanonShaping::glyphDefinitionTable;
++  fGSUBTable.setTo(LETableReference::kStaticData, (const GlyphSubstitutionTableHeader *) CanonShaping::glyphSubstitutionTable, CanonShaping::glyphSubstitutionTableLen);
++  fGDEFTable.setTo(LETableReference::kStaticData, (const GlyphDefinitionTableHeader *) CanonShaping::glyphDefinitionTable, CanonShaping::glyphDefinitionTableLen);
+     /* OpenTypeLayoutEngine will allocate a substitution filter */
+ }
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ArabicShaping.cpp openjdk/jdk/src/share/native/sun/font/layout/ArabicShaping.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/ArabicShaping.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/ArabicShaping.cpp
+@@ -59,7 +59,8 @@
+ ArabicShaping::ShapeType ArabicShaping::getShapeType(LEUnicode c)
+ {
+   LEErrorCode success = LE_NO_ERROR;
+-  const LEReferenceTo<ClassDefinitionTable> joiningTypes((const ClassDefinitionTable *) ArabicShaping::shapingTypeTable,
++  const LEReferenceTo<ClassDefinitionTable> joiningTypes(LETableReference::kStaticData,
++                                                         (const ClassDefinitionTable *) ArabicShaping::shapingTypeTable,
+                                                          ArabicShaping::shapingTypeTableLen);
+   le_int32 joiningType = joiningTypes->getGlyphClass(joiningTypes, c, success);
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/CanonShaping.cpp openjdk/jdk/src/share/native/sun/font/layout/CanonShaping.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/CanonShaping.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/CanonShaping.cpp
+@@ -60,7 +60,7 @@
+                                 LEUnicode *outChars, LEGlyphStorage &glyphStorage)
+ {
+     LEErrorCode success = LE_NO_ERROR;
+-    LEReferenceTo<GlyphDefinitionTableHeader> gdefTable(CanonShaping::glyphDefinitionTable, CanonShaping::glyphDefinitionTableLen);
++    LEReferenceTo<GlyphDefinitionTableHeader> gdefTable(LETableReference::kStaticData, CanonShaping::glyphDefinitionTable, CanonShaping::glyphDefinitionTableLen);
+     LEReferenceTo<ClassDefinitionTable> classTable = gdefTable->getMarkAttachClassDefinitionTable(gdefTable, success);
+     le_int32 *combiningClasses = LE_NEW_ARRAY(le_int32, charCount);
+     le_int32 *indices = LE_NEW_ARRAY(le_int32, charCount);
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/CharSubstitutionFilter.h openjdk/jdk/src/share/native/sun/font/layout/CharSubstitutionFilter.h
+--- openjdk/jdk/src/share/native/sun/font/layout/CharSubstitutionFilter.h
++++ openjdk/jdk/src/share/native/sun/font/layout/CharSubstitutionFilter.h
+@@ -43,6 +43,8 @@
+  * This filter is used by character-based GSUB processors. It
+  * accepts only those characters which the given font can display.
+  *
++ * Note: Implementation is in ArabicLayoutEngine.cpp
++ *
+  * @internal
+  */
+ class CharSubstitutionFilter : public UMemory, public LEGlyphFilter
+@@ -97,7 +99,7 @@
+      *
+      * @internal
+      */
+-    le_bool accept(LEGlyphID glyph) const;
++    le_bool accept(LEGlyphID glyph, LEErrorCode &success) const;
+ };
+ 
+ U_NAMESPACE_END
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ClassDefinitionTables.h openjdk/jdk/src/share/native/sun/font/layout/ClassDefinitionTables.h
+--- openjdk/jdk/src/share/native/sun/font/layout/ClassDefinitionTables.h
++++ openjdk/jdk/src/share/native/sun/font/layout/ClassDefinitionTables.h
+@@ -49,6 +49,7 @@
+     le_int32  getGlyphClass(const LETableReference &base, LEGlyphID glyphID, LEErrorCode &success) const;
+     le_bool   hasGlyphClass(const LETableReference &base, le_int32 glyphClass, LEErrorCode &success) const;
+ 
++#if LE_ENABLE_RAW
+   le_int32 getGlyphClass(LEGlyphID glyphID) const {
+     LETableReference base((const le_uint8*)this);
+     LEErrorCode ignored = LE_NO_ERROR;
+@@ -60,6 +61,7 @@
+     LEErrorCode ignored = LE_NO_ERROR;
+     return hasGlyphClass(base,glyphClass,ignored);
+   }
++#endif
+ };
+ 
+ struct ClassDefFormat1Table : ClassDefinitionTable
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ContextualSubstSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/ContextualSubstSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/ContextualSubstSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/ContextualSubstSubtables.cpp
+@@ -48,7 +48,7 @@
+ */
+ void ContextualSubstitutionBase::applySubstitutionLookups(
+         const LookupProcessor *lookupProcessor,
+-        const SubstitutionLookupRecord *substLookupRecordArray,
++        const LEReferenceToArrayOf<SubstitutionLookupRecord>& substLookupRecordArray,
+         le_uint16 substCount,
+         GlyphIterator *glyphIterator,
+         const LEFontInstance *fontInstance,
+@@ -60,10 +60,11 @@
+     }
+ 
+     GlyphIterator tempIterator(*glyphIterator);
++    const SubstitutionLookupRecord *substLookupRecordArrayPtr = substLookupRecordArray.getAlias(); // OK to dereference, range checked against substCount below.
+ 
+     for (le_int16 subst = 0; subst < substCount && LE_SUCCESS(success); subst += 1) {
+-        le_uint16 sequenceIndex = SWAPW(substLookupRecordArray[subst].sequenceIndex);
+-        le_uint16 lookupListIndex = SWAPW(substLookupRecordArray[subst].lookupListIndex);
++        le_uint16 sequenceIndex = SWAPW(substLookupRecordArrayPtr[subst].sequenceIndex);
++        le_uint16 lookupListIndex = SWAPW(substLookupRecordArrayPtr[subst].lookupListIndex);
+ 
+         tempIterator.setCurrStreamPosition(position);
+         tempIterator.next(sequenceIndex);
+@@ -72,7 +73,7 @@
+     }
+ }
+ 
+-le_bool ContextualSubstitutionBase::matchGlyphIDs(const TTGlyphID *glyphArray, le_uint16 glyphCount,
++le_bool ContextualSubstitutionBase::matchGlyphIDs(const LEReferenceToArrayOf<TTGlyphID>& glyphArray, le_uint16 glyphCount,
+                                                GlyphIterator *glyphIterator, le_bool backtrack)
+ {
+     le_int32 direction = 1;
+@@ -101,9 +102,12 @@
+     return TRUE;
+ }
+ 
+-le_bool ContextualSubstitutionBase::matchGlyphClasses(const le_uint16 *classArray, le_uint16 glyphCount,
++le_bool ContextualSubstitutionBase::matchGlyphClasses(
++    const LEReferenceToArrayOf<le_uint16> &classArray,
++    le_uint16 glyphCount,
+                                                GlyphIterator *glyphIterator,
+-                                               const ClassDefinitionTable *classDefinitionTable,
++    const LEReferenceTo<ClassDefinitionTable> &classDefinitionTable,
++    LEErrorCode &success,
+                                                le_bool backtrack)
+ {
+     le_int32 direction = 1;
+@@ -120,7 +124,7 @@
+         }
+ 
+         LEGlyphID glyph = glyphIterator->getCurrGlyphID();
+-        le_int32 glyphClass = classDefinitionTable->getGlyphClass(glyph);
++        le_int32 glyphClass = classDefinitionTable->getGlyphClass(classDefinitionTable, glyph, success);
+         le_int32 matchClass = SWAPW(classArray[match]);
+ 
+         if (glyphClass != matchClass) {
+@@ -128,7 +132,7 @@
+             // in the class array which aren't in the class definition
+             // table. If we're looking for such a class, pretend that
+             // we found it.
+-            if (classDefinitionTable->hasGlyphClass(matchClass)) {
++            if (classDefinitionTable->hasGlyphClass(classDefinitionTable, matchClass, success)) {
+                 return FALSE;
+             }
+         }
+@@ -140,8 +144,8 @@
+     return TRUE;
+ }
+ 
+-le_bool ContextualSubstitutionBase::matchGlyphCoverages(const Offset *coverageTableOffsetArray, le_uint16 glyphCount,
+-                                                     GlyphIterator *glyphIterator, const char *offsetBase, le_bool backtrack)
++le_bool ContextualSubstitutionBase::matchGlyphCoverages(const LEReferenceToArrayOf<Offset> &coverageTableOffsetArray, le_uint16 glyphCount,
++GlyphIterator *glyphIterator, const LETableReference &offsetBase, LEErrorCode &success, le_bool backtrack)
+ {
+     le_int32 direction = 1;
+     le_int32 glyph = 0;
+@@ -153,13 +157,15 @@
+ 
+     while (glyphCount > 0) {
+         Offset coverageTableOffset = SWAPW(coverageTableOffsetArray[glyph]);
+-        const CoverageTable *coverageTable = (const CoverageTable *) (offsetBase + coverageTableOffset);
++        LEReferenceTo<CoverageTable> coverageTable(offsetBase, success, coverageTableOffset);
+ 
+-        if (! glyphIterator->next()) {
++        if (LE_FAILURE(success) || ! glyphIterator->next()) {
+             return FALSE;
+         }
+ 
+-        if (coverageTable->getGlyphCoverage((LEGlyphID) glyphIterator->getCurrGlyphID()) < 0) {
++        if (coverageTable->getGlyphCoverage(coverageTable,
++                                            (LEGlyphID) glyphIterator->getCurrGlyphID(),
++                                            success) < 0) {
+             return FALSE;
+         }
+ 
+@@ -170,7 +176,7 @@
+     return TRUE;
+ }
+ 
+-le_uint32 ContextualSubstitutionSubtable::process(const LookupProcessor *lookupProcessor,
++le_uint32 ContextualSubstitutionSubtable::process(const LETableReference &base, const LookupProcessor *lookupProcessor,
+                                                   GlyphIterator *glyphIterator,
+                                                   const LEFontInstance *fontInstance,
+                                                   LEErrorCode& success) const
+@@ -186,20 +192,29 @@
+ 
+     case 1:
+     {
+-        const ContextualSubstitutionFormat1Subtable *subtable = (const ContextualSubstitutionFormat1Subtable *) this;
+-        return subtable->process(lookupProcessor, glyphIterator, fontInstance, success);
++      LEReferenceTo<ContextualSubstitutionFormat1Subtable> subtable(base, success, (const ContextualSubstitutionFormat1Subtable *) this);
++      if( LE_FAILURE(success) ) {
++        return 0;
++      }
++      return subtable->process(subtable, lookupProcessor, glyphIterator, fontInstance, success);
+     }
+ 
+     case 2:
+     {
+-        const ContextualSubstitutionFormat2Subtable *subtable = (const ContextualSubstitutionFormat2Subtable *) this;
+-        return subtable->process(lookupProcessor, glyphIterator, fontInstance, success);
++      LEReferenceTo<ContextualSubstitutionFormat2Subtable> subtable(base, success, (const ContextualSubstitutionFormat2Subtable *) this);
++      if( LE_FAILURE(success) ) {
++        return 0;
++      }
++      return subtable->process(subtable, lookupProcessor, glyphIterator, fontInstance, success);
+     }
+ 
+     case 3:
+     {
+-        const ContextualSubstitutionFormat3Subtable *subtable = (const ContextualSubstitutionFormat3Subtable *) this;
+-        return subtable->process(lookupProcessor, glyphIterator, fontInstance, success);
++      LEReferenceTo<ContextualSubstitutionFormat3Subtable> subtable(base, success, (const ContextualSubstitutionFormat3Subtable *) this);
++      if( LE_FAILURE(success) ) {
++        return 0;
++      }
++      return subtable->process(subtable, lookupProcessor, glyphIterator, fontInstance, success);
+     }
+ 
+     default:
+@@ -207,7 +222,7 @@
+     }
+ }
+ 
+-le_uint32 ContextualSubstitutionFormat1Subtable::process(const LookupProcessor *lookupProcessor,
++le_uint32 ContextualSubstitutionFormat1Subtable::process(const LETableReference &base, const LookupProcessor *lookupProcessor,
+                                                          GlyphIterator *glyphIterator,
+                                                          const LEFontInstance *fontInstance,
+                                                          LEErrorCode& success) const
+@@ -227,22 +242,22 @@
+ 
+         if (coverageIndex < srSetCount) {
+             Offset subRuleSetTableOffset = SWAPW(subRuleSetTableOffsetArray[coverageIndex]);
+-            const SubRuleSetTable *subRuleSetTable =
+-                (const SubRuleSetTable *) ((char *) this + subRuleSetTableOffset);
++            LEReferenceTo<SubRuleSetTable>
++                 subRuleSetTable(base, success, (const SubRuleSetTable *) ((char *) this + subRuleSetTableOffset));
+             le_uint16 subRuleCount = SWAPW(subRuleSetTable->subRuleCount);
+             le_int32 position = glyphIterator->getCurrStreamPosition();
+ 
+             for (le_uint16 subRule = 0; subRule < subRuleCount; subRule += 1) {
+                 Offset subRuleTableOffset =
+                     SWAPW(subRuleSetTable->subRuleTableOffsetArray[subRule]);
+-                const SubRuleTable *subRuleTable =
+-                    (const SubRuleTable *) ((char *) subRuleSetTable + subRuleTableOffset);
++                LEReferenceTo<SubRuleTable>
++                     subRuleTable(subRuleSetTable, success, subRuleTableOffset);
+                 le_uint16 matchCount = SWAPW(subRuleTable->glyphCount) - 1;
+                 le_uint16 substCount = SWAPW(subRuleTable->substCount);
+-
+-                if (matchGlyphIDs(subRuleTable->inputGlyphArray, matchCount, glyphIterator)) {
+-                    const SubstitutionLookupRecord *substLookupRecordArray =
+-                        (const SubstitutionLookupRecord *) &subRuleTable->inputGlyphArray[matchCount];
++                LEReferenceToArrayOf<TTGlyphID> inputGlyphArray(base, success, subRuleTable->inputGlyphArray, matchCount+2);
++                if (matchGlyphIDs(inputGlyphArray, matchCount, glyphIterator)) {
++                  LEReferenceToArrayOf<SubstitutionLookupRecord>
++                    substLookupRecordArray(base, success, (const SubstitutionLookupRecord *) &subRuleTable->inputGlyphArray[matchCount], substCount);
+ 
+                     applySubstitutionLookups(lookupProcessor, substLookupRecordArray, substCount, glyphIterator, fontInstance, position, success);
+ 
+@@ -259,7 +274,8 @@
+     return 0;
+ }
+ 
+-le_uint32 ContextualSubstitutionFormat2Subtable::process(const LookupProcessor *lookupProcessor,
++le_uint32 ContextualSubstitutionFormat2Subtable::process(const LETableReference &base,
++         const LookupProcessor *lookupProcessor,
+                                                          GlyphIterator *glyphIterator,
+                                                          const LEFontInstance *fontInstance,
+                                                          LEErrorCode& success) const
+@@ -275,29 +291,33 @@
+     }
+ 
+     if (coverageIndex >= 0) {
+-        const ClassDefinitionTable *classDefinitionTable =
+-            (const ClassDefinitionTable *) ((char *) this + SWAPW(classDefTableOffset));
++        LEReferenceTo<ClassDefinitionTable> classDefinitionTable(base, success,
++                                                                 (const ClassDefinitionTable *) ((char *) this + SWAPW(classDefTableOffset)));
+         le_uint16 scSetCount = SWAPW(subClassSetCount);
+-        le_int32 setClass = classDefinitionTable->getGlyphClass(glyphIterator->getCurrGlyphID());
++        le_int32 setClass = classDefinitionTable->getGlyphClass(classDefinitionTable,
++                                                                glyphIterator->getCurrGlyphID(),
++                                                                success);
+ 
+         if (setClass < scSetCount && subClassSetTableOffsetArray[setClass] != 0) {
+             Offset subClassSetTableOffset = SWAPW(subClassSetTableOffsetArray[setClass]);
+-            const SubClassSetTable *subClassSetTable =
+-                (const SubClassSetTable *) ((char *) this + subClassSetTableOffset);
++            LEReferenceTo<SubClassSetTable>
++                 subClassSetTable(base, success, (const SubClassSetTable *) ((char *) this + subClassSetTableOffset));
+             le_uint16 subClassRuleCount = SWAPW(subClassSetTable->subClassRuleCount);
+             le_int32 position = glyphIterator->getCurrStreamPosition();
+ 
+             for (le_uint16 scRule = 0; scRule < subClassRuleCount; scRule += 1) {
+                 Offset subClassRuleTableOffset =
+                     SWAPW(subClassSetTable->subClassRuleTableOffsetArray[scRule]);
+-                const SubClassRuleTable *subClassRuleTable =
+-                    (const SubClassRuleTable *) ((char *) subClassSetTable + subClassRuleTableOffset);
++                LEReferenceTo<SubClassRuleTable>
++                     subClassRuleTable(subClassSetTable, success, subClassRuleTableOffset);
+                 le_uint16 matchCount = SWAPW(subClassRuleTable->glyphCount) - 1;
+                 le_uint16 substCount = SWAPW(subClassRuleTable->substCount);
+ 
+-                if (matchGlyphClasses(subClassRuleTable->classArray, matchCount, glyphIterator, classDefinitionTable)) {
+-                    const SubstitutionLookupRecord *substLookupRecordArray =
+-                        (const SubstitutionLookupRecord *) &subClassRuleTable->classArray[matchCount];
++                LEReferenceToArrayOf<le_uint16> classArray(base, success, subClassRuleTable->classArray, matchCount+1);
++
++                if (matchGlyphClasses(classArray, matchCount, glyphIterator, classDefinitionTable, success)) {
++                    LEReferenceToArrayOf<SubstitutionLookupRecord>
++                      substLookupRecordArray(base, success, (const SubstitutionLookupRecord *) &subClassRuleTable->classArray[matchCount], substCount);
+ 
+                     applySubstitutionLookups(lookupProcessor, substLookupRecordArray, substCount, glyphIterator, fontInstance, position, success);
+ 
+@@ -314,7 +334,8 @@
+     return 0;
+ }
+ 
+-le_uint32 ContextualSubstitutionFormat3Subtable::process(const LookupProcessor *lookupProcessor,
++le_uint32 ContextualSubstitutionFormat3Subtable::process(const LETableReference &base,
++                                                         const LookupProcessor *lookupProcessor,
+                                                          GlyphIterator *glyphIterator,
+                                                          const LEFontInstance *fontInstance,
+                                                          LEErrorCode& success)const
+@@ -333,9 +354,13 @@
+     // that matched when we're done.
+     glyphIterator->prev();
+ 
+-    if (ContextualSubstitutionBase::matchGlyphCoverages(coverageTableOffsetArray, gCount, glyphIterator, (const char *) this)) {
+-        const SubstitutionLookupRecord *substLookupRecordArray =
+-            (const SubstitutionLookupRecord *) &coverageTableOffsetArray[gCount];
++    LEReferenceToArrayOf<Offset> covTableOffsetArray(base, success, coverageTableOffsetArray, gCount);
++
++    if( LE_FAILURE(success) ) { return 0; }
++
++    if (ContextualSubstitutionBase::matchGlyphCoverages(covTableOffsetArray, gCount, glyphIterator, base, success)) {
++        LEReferenceToArrayOf<SubstitutionLookupRecord>
++          substLookupRecordArray(base, success, (const SubstitutionLookupRecord *) &coverageTableOffsetArray[gCount], subCount);
+ 
+         ContextualSubstitutionBase::applySubstitutionLookups(lookupProcessor, substLookupRecordArray, subCount, glyphIterator, fontInstance, position, success);
+ 
+@@ -347,7 +372,8 @@
+     return 0;
+ }
+ 
+-le_uint32 ChainingContextualSubstitutionSubtable::process(const LookupProcessor *lookupProcessor,
++le_uint32 ChainingContextualSubstitutionSubtable::process(const LEReferenceTo<ChainingContextualSubstitutionSubtable> &base,
++                                                          const LookupProcessor *lookupProcessor,
+                                                           GlyphIterator *glyphIterator,
+                                                           const LEFontInstance *fontInstance,
+                                                           LEErrorCode& success) const
+@@ -363,20 +389,23 @@
+ 
+     case 1:
+     {
+-        const ChainingContextualSubstitutionFormat1Subtable *subtable = (const ChainingContextualSubstitutionFormat1Subtable *) this;
+-        return subtable->process(lookupProcessor, glyphIterator, fontInstance, success);
++      LEReferenceTo<ChainingContextualSubstitutionFormat1Subtable> subtable(base, success,  (ChainingContextualSubstitutionFormat1Subtable *) this);
++      if(LE_FAILURE(success)) return 0;
++      return subtable->process(subtable, lookupProcessor, glyphIterator, fontInstance, success);
+     }
+ 
+     case 2:
+     {
+-        const ChainingContextualSubstitutionFormat2Subtable *subtable = (const ChainingContextualSubstitutionFormat2Subtable *) this;
+-        return subtable->process(lookupProcessor, glyphIterator, fontInstance, success);
++      LEReferenceTo<ChainingContextualSubstitutionFormat2Subtable> subtable(base, success, (const ChainingContextualSubstitutionFormat2Subtable *) this);
++      if( LE_FAILURE(success) ) { return 0; }
++      return subtable->process(subtable, lookupProcessor, glyphIterator, fontInstance, success);
+     }
+ 
+     case 3:
+     {
+-        const ChainingContextualSubstitutionFormat3Subtable *subtable = (const ChainingContextualSubstitutionFormat3Subtable *) this;
+-        return subtable->process(lookupProcessor, glyphIterator, fontInstance, success);
++      LEReferenceTo<ChainingContextualSubstitutionFormat3Subtable> subtable(base, success, (const ChainingContextualSubstitutionFormat3Subtable *) this);
++      if( LE_FAILURE(success) ) { return 0; }
++      return subtable->process(subtable, lookupProcessor, glyphIterator, fontInstance, success);
+     }
+ 
+     default:
+@@ -390,7 +419,7 @@
+ // emptyFeatureList matches an le_uint32 or an le_uint16...
+ static const FeatureMask emptyFeatureList = 0x00000000UL;
+ 
+-le_uint32 ChainingContextualSubstitutionFormat1Subtable::process(const LookupProcessor *lookupProcessor,
++le_uint32 ChainingContextualSubstitutionFormat1Subtable::process(const LETableReference &base, const LookupProcessor *lookupProcessor,
+                                                                  GlyphIterator *glyphIterator,
+                                                                  const LEFontInstance *fontInstance,
+                                                                  LEErrorCode& success) const
+@@ -410,8 +439,8 @@
+ 
+         if (coverageIndex < srSetCount) {
+             Offset chainSubRuleSetTableOffset = SWAPW(chainSubRuleSetTableOffsetArray[coverageIndex]);
+-            const ChainSubRuleSetTable *chainSubRuleSetTable =
+-                (const ChainSubRuleSetTable *) ((char *) this + chainSubRuleSetTableOffset);
++            LEReferenceTo<ChainSubRuleSetTable>
++                 chainSubRuleSetTable(base, success, (const ChainSubRuleSetTable *) ((char *) this + chainSubRuleSetTableOffset));
+             le_uint16 chainSubRuleCount = SWAPW(chainSubRuleSetTable->chainSubRuleCount);
+             le_int32 position = glyphIterator->getCurrStreamPosition();
+             GlyphIterator tempIterator(*glyphIterator, emptyFeatureList);
+@@ -419,13 +448,19 @@
+             for (le_uint16 subRule = 0; subRule < chainSubRuleCount; subRule += 1) {
+                 Offset chainSubRuleTableOffset =
+                     SWAPW(chainSubRuleSetTable->chainSubRuleTableOffsetArray[subRule]);
+-                const ChainSubRuleTable *chainSubRuleTable =
+-                    (const ChainSubRuleTable *) ((char *) chainSubRuleSetTable + chainSubRuleTableOffset);
++                LEReferenceTo<ChainSubRuleTable>
++                     chainSubRuleTable = LEReferenceTo<ChainSubRuleTable>(chainSubRuleSetTable, success, chainSubRuleTableOffset);
++                if( LE_FAILURE(success) ) { return 0; }
+                 le_uint16 backtrackGlyphCount = SWAPW(chainSubRuleTable->backtrackGlyphCount);
++                LEReferenceToArrayOf<TTGlyphID> backtrackGlyphArray(base, success, chainSubRuleTable->backtrackGlyphArray, backtrackGlyphCount);
++                if( LE_FAILURE(success) ) { return 0; }
+                 le_uint16 inputGlyphCount = (le_uint16) SWAPW(chainSubRuleTable->backtrackGlyphArray[backtrackGlyphCount]) - 1;
+-                const TTGlyphID *inputGlyphArray = &chainSubRuleTable->backtrackGlyphArray[backtrackGlyphCount + 1];
++                LEReferenceToArrayOf<TTGlyphID>   inputGlyphArray(base, success, &chainSubRuleTable->backtrackGlyphArray[backtrackGlyphCount + 1], inputGlyphCount+2);
++
++                if( LE_FAILURE(success) ) { return 0; }
+                 le_uint16 lookaheadGlyphCount = (le_uint16) SWAPW(inputGlyphArray[inputGlyphCount]);
+-                const TTGlyphID *lookaheadGlyphArray = &inputGlyphArray[inputGlyphCount + 1];
++                LEReferenceToArrayOf<TTGlyphID>   lookaheadGlyphArray(base, success, inputGlyphArray.getAlias(inputGlyphCount + 1,success), lookaheadGlyphCount+2);
++                if( LE_FAILURE(success) ) { return 0; }
+                 le_uint16 substCount = (le_uint16) SWAPW(lookaheadGlyphArray[lookaheadGlyphCount]);
+ 
+                 tempIterator.setCurrStreamPosition(position);
+@@ -435,7 +470,8 @@
+                 }
+ 
+                 tempIterator.prev();
+-                if (! matchGlyphIDs(chainSubRuleTable->backtrackGlyphArray, backtrackGlyphCount, &tempIterator, TRUE)) {
++
++                if (! matchGlyphIDs(backtrackGlyphArray, backtrackGlyphCount, &tempIterator, TRUE)) {
+                     continue;
+                 }
+ 
+@@ -446,8 +482,8 @@
+                 }
+ 
+                 if (matchGlyphIDs(inputGlyphArray, inputGlyphCount, glyphIterator)) {
+-                    const SubstitutionLookupRecord *substLookupRecordArray =
+-                        (const SubstitutionLookupRecord *) &lookaheadGlyphArray[lookaheadGlyphCount + 1];
++                    LEReferenceToArrayOf<SubstitutionLookupRecord>
++                      substLookupRecordArray(base, success, (const SubstitutionLookupRecord *) lookaheadGlyphArray.getAlias(lookaheadGlyphCount + 1,success), substCount);
+ 
+                     applySubstitutionLookups(lookupProcessor, substLookupRecordArray, substCount, glyphIterator, fontInstance, position, success);
+ 
+@@ -464,7 +500,7 @@
+     return 0;
+ }
+ 
+-le_uint32 ChainingContextualSubstitutionFormat2Subtable::process(const LookupProcessor *lookupProcessor,
++le_uint32 ChainingContextualSubstitutionFormat2Subtable::process(const LETableReference &base, const LookupProcessor *lookupProcessor,
+                                                                  GlyphIterator *glyphIterator,
+                                                                  const LEFontInstance *fontInstance,
+                                                                  LEErrorCode& success) const
+@@ -480,19 +516,21 @@
+     }
+ 
+     if (coverageIndex >= 0) {
+-        const ClassDefinitionTable *backtrackClassDefinitionTable =
+-            (const ClassDefinitionTable *) ((char *) this + SWAPW(backtrackClassDefTableOffset));
+-        const ClassDefinitionTable *inputClassDefinitionTable =
+-            (const ClassDefinitionTable *) ((char *) this + SWAPW(inputClassDefTableOffset));
+-        const ClassDefinitionTable *lookaheadClassDefinitionTable =
+-            (const ClassDefinitionTable *) ((char *) this + SWAPW(lookaheadClassDefTableOffset));
++        LEReferenceTo<ClassDefinitionTable>
++             backtrackClassDefinitionTable(base, success, (const ClassDefinitionTable *) ((char *) this + SWAPW(backtrackClassDefTableOffset)));
++        LEReferenceTo<ClassDefinitionTable>
++             inputClassDefinitionTable(base, success, (const ClassDefinitionTable *) ((char *) this + SWAPW(inputClassDefTableOffset)));
++        LEReferenceTo<ClassDefinitionTable>
++             lookaheadClassDefinitionTable(base, success, (const ClassDefinitionTable *) ((char *) this + SWAPW(lookaheadClassDefTableOffset)));
+         le_uint16 scSetCount = SWAPW(chainSubClassSetCount);
+-        le_int32 setClass = inputClassDefinitionTable->getGlyphClass(glyphIterator->getCurrGlyphID());
++        le_int32 setClass = inputClassDefinitionTable->getGlyphClass(inputClassDefinitionTable,
++                                                                     glyphIterator->getCurrGlyphID(),
++                                                                     success);
+ 
+         if (setClass < scSetCount && chainSubClassSetTableOffsetArray[setClass] != 0) {
+             Offset chainSubClassSetTableOffset = SWAPW(chainSubClassSetTableOffsetArray[setClass]);
+-            const ChainSubClassSetTable *chainSubClassSetTable =
+-                (const ChainSubClassSetTable *) ((char *) this + chainSubClassSetTableOffset);
++            LEReferenceTo<ChainSubClassSetTable>
++                 chainSubClassSetTable(base, success, (const ChainSubClassSetTable *) ((char *) this + chainSubClassSetTableOffset));
+             le_uint16 chainSubClassRuleCount = SWAPW(chainSubClassSetTable->chainSubClassRuleCount);
+             le_int32 position = glyphIterator->getCurrStreamPosition();
+             GlyphIterator tempIterator(*glyphIterator, emptyFeatureList);
+@@ -500,13 +538,15 @@
+             for (le_uint16 scRule = 0; scRule < chainSubClassRuleCount; scRule += 1) {
+                 Offset chainSubClassRuleTableOffset =
+                     SWAPW(chainSubClassSetTable->chainSubClassRuleTableOffsetArray[scRule]);
+-                const ChainSubClassRuleTable *chainSubClassRuleTable =
+-                    (const ChainSubClassRuleTable *) ((char *) chainSubClassSetTable + chainSubClassRuleTableOffset);
++                LEReferenceTo<ChainSubClassRuleTable>
++                     chainSubClassRuleTable(chainSubClassSetTable, success, chainSubClassRuleTableOffset);
+                 le_uint16 backtrackGlyphCount = SWAPW(chainSubClassRuleTable->backtrackGlyphCount);
+                 le_uint16 inputGlyphCount = SWAPW(chainSubClassRuleTable->backtrackClassArray[backtrackGlyphCount]) - 1;
+-                const le_uint16 *inputClassArray = &chainSubClassRuleTable->backtrackClassArray[backtrackGlyphCount + 1];
+-                le_uint16 lookaheadGlyphCount = SWAPW(inputClassArray[inputGlyphCount]);
+-                const le_uint16 *lookaheadClassArray = &inputClassArray[inputGlyphCount + 1];
++                LEReferenceToArrayOf<le_uint16>   inputClassArray(base, success, &chainSubClassRuleTable->backtrackClassArray[backtrackGlyphCount + 1],inputGlyphCount+2); // +2 for the lookaheadGlyphCount count
++                le_uint16 lookaheadGlyphCount = SWAPW(inputClassArray.getObject(inputGlyphCount, success));
++                LEReferenceToArrayOf<le_uint16>   lookaheadClassArray(base, success, inputClassArray.getAlias(inputGlyphCount + 1,success), lookaheadGlyphCount+2); // +2 for the substCount
++
++                if( LE_FAILURE(success) ) { return 0; }
+                 le_uint16 substCount = SWAPW(lookaheadClassArray[lookaheadGlyphCount]);
+ 
+ 
+@@ -517,20 +557,22 @@
+                 }
+ 
+                 tempIterator.prev();
+-                if (! matchGlyphClasses(chainSubClassRuleTable->backtrackClassArray, backtrackGlyphCount,
+-                    &tempIterator, backtrackClassDefinitionTable, TRUE)) {
++                LEReferenceToArrayOf<le_uint16>   backtrackClassArray(base, success, chainSubClassRuleTable->backtrackClassArray, backtrackGlyphCount);
++                if( LE_FAILURE(success) ) { return 0; }
++                if (! matchGlyphClasses(backtrackClassArray, backtrackGlyphCount,
++                                        &tempIterator, backtrackClassDefinitionTable, success, TRUE)) {
+                     continue;
+                 }
+ 
+                 tempIterator.setCurrStreamPosition(position);
+                 tempIterator.next(inputGlyphCount);
+-                if (! matchGlyphClasses(lookaheadClassArray, lookaheadGlyphCount, &tempIterator, lookaheadClassDefinitionTable)) {
++                if (! matchGlyphClasses(lookaheadClassArray, lookaheadGlyphCount, &tempIterator, lookaheadClassDefinitionTable, success)) {
+                     continue;
+                 }
+ 
+-                if (matchGlyphClasses(inputClassArray, inputGlyphCount, glyphIterator, inputClassDefinitionTable)) {
+-                    const SubstitutionLookupRecord *substLookupRecordArray =
+-                        (const SubstitutionLookupRecord *) &lookaheadClassArray[lookaheadGlyphCount + 1];
++                if (matchGlyphClasses(inputClassArray, inputGlyphCount, glyphIterator, inputClassDefinitionTable, success)) {
++                    LEReferenceToArrayOf<SubstitutionLookupRecord>
++                      substLookupRecordArray(base, success, (const SubstitutionLookupRecord *) lookaheadClassArray.getAlias(lookaheadGlyphCount + 1, success), substCount);
+ 
+                     applySubstitutionLookups(lookupProcessor, substLookupRecordArray, substCount, glyphIterator, fontInstance, position, success);
+ 
+@@ -547,7 +589,7 @@
+     return 0;
+ }
+ 
+-le_uint32 ChainingContextualSubstitutionFormat3Subtable::process(const LookupProcessor *lookupProcessor,
++le_uint32 ChainingContextualSubstitutionFormat3Subtable::process(const LETableReference &base, const LookupProcessor *lookupProcessor,
+                                                                  GlyphIterator *glyphIterator,
+                                                                  const LEFontInstance *fontInstance,
+                                                                  LEErrorCode & success) const
+@@ -558,9 +600,13 @@
+ 
+     le_uint16 backtrkGlyphCount = SWAPW(backtrackGlyphCount);
+     le_uint16 inputGlyphCount = (le_uint16) SWAPW(backtrackCoverageTableOffsetArray[backtrkGlyphCount]);
+-    const Offset *inputCoverageTableOffsetArray = &backtrackCoverageTableOffsetArray[backtrkGlyphCount + 1];
++    LEReferenceToArrayOf<Offset>   inputCoverageTableOffsetArray(base, success, &backtrackCoverageTableOffsetArray[backtrkGlyphCount + 1], inputGlyphCount+2); // offset
+     const le_uint16 lookaheadGlyphCount = (le_uint16) SWAPW(inputCoverageTableOffsetArray[inputGlyphCount]);
+-    const Offset *lookaheadCoverageTableOffsetArray = &inputCoverageTableOffsetArray[inputGlyphCount + 1];
++
++    if( LE_FAILURE(success) ) { return 0; }
++    LEReferenceToArrayOf<Offset>   lookaheadCoverageTableOffsetArray(base, success, inputCoverageTableOffsetArray.getAlias(inputGlyphCount + 1, success), lookaheadGlyphCount+2);
++
++    if( LE_FAILURE(success) ) { return 0; }
+     le_uint16 substCount = (le_uint16) SWAPW(lookaheadCoverageTableOffsetArray[lookaheadGlyphCount]);
+     le_int32 position = glyphIterator->getCurrStreamPosition();
+     GlyphIterator tempIterator(*glyphIterator, emptyFeatureList);
+@@ -571,14 +617,14 @@
+ 
+     tempIterator.prev();
+     if (! ContextualSubstitutionBase::matchGlyphCoverages(backtrackCoverageTableOffsetArray,
+-        backtrkGlyphCount, &tempIterator, (const char *) this, TRUE)) {
++                       backtrkGlyphCount, &tempIterator, base, success, TRUE)) {
+         return 0;
+     }
+ 
+     tempIterator.setCurrStreamPosition(position);
+     tempIterator.next(inputGlyphCount - 1);
+     if (! ContextualSubstitutionBase::matchGlyphCoverages(lookaheadCoverageTableOffsetArray,
+-        lookaheadGlyphCount, &tempIterator, (const char *) this)) {
++                        lookaheadGlyphCount, &tempIterator, base, success)) {
+         return 0;
+     }
+ 
+@@ -589,9 +635,10 @@
+     glyphIterator->prev();
+ 
+     if (ContextualSubstitutionBase::matchGlyphCoverages(inputCoverageTableOffsetArray,
+-        inputGlyphCount, glyphIterator, (const char *) this)) {
+-        const SubstitutionLookupRecord *substLookupRecordArray =
+-            (const SubstitutionLookupRecord *) &lookaheadCoverageTableOffsetArray[lookaheadGlyphCount + 1];
++                                                        inputGlyphCount, glyphIterator, base, success)) {
++        LEReferenceToArrayOf<SubstitutionLookupRecord>
++          substLookupRecordArray(base, success,
++                                 (const SubstitutionLookupRecord *) lookaheadCoverageTableOffsetArray.getAlias(lookaheadGlyphCount + 1,success), substCount);
+ 
+         ContextualSubstitutionBase::applySubstitutionLookups(lookupProcessor, substLookupRecordArray, substCount, glyphIterator, fontInstance, position, success);
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ContextualSubstSubtables.h openjdk/jdk/src/share/native/sun/font/layout/ContextualSubstSubtables.h
+--- openjdk/jdk/src/share/native/sun/font/layout/ContextualSubstSubtables.h
++++ openjdk/jdk/src/share/native/sun/font/layout/ContextualSubstSubtables.h
+@@ -56,20 +56,32 @@
+ struct ContextualSubstitutionBase : GlyphSubstitutionSubtable
+ {
+     static le_bool matchGlyphIDs(
+-        const TTGlyphID *glyphArray, le_uint16 glyphCount, GlyphIterator *glyphIterator,
++                                 const LEReferenceToArrayOf<TTGlyphID> &glyphArray, le_uint16 glyphCount, GlyphIterator *glyphIterator,
+         le_bool backtrack = FALSE);
+ 
+     static le_bool matchGlyphClasses(
+-        const le_uint16 *classArray, le_uint16 glyphCount, GlyphIterator *glyphIterator,
+-        const ClassDefinitionTable *classDefinitionTable, le_bool backtrack = FALSE);
++                                     const LEReferenceToArrayOf<le_uint16> &classArray, le_uint16 glyphCount, GlyphIterator *glyphIterator,
++        const LEReferenceTo<ClassDefinitionTable> &classDefinitionTable, LEErrorCode &success, le_bool backtrack = FALSE);
+ 
+     static le_bool matchGlyphCoverages(
++                                       const LEReferenceToArrayOf<Offset> &coverageTableOffsetArray, le_uint16 glyphCount,
++        GlyphIterator *glyphIterator, const LETableReference& offsetBase, LEErrorCode &success, le_bool backtrack = FALSE);
++
++    /**
++     * little shim to wrap the Offset array in range checking
++     * @private
++     */
++    static le_bool matchGlyphCoverages(
+         const Offset *coverageTableOffsetArray, le_uint16 glyphCount,
+-        GlyphIterator *glyphIterator, const char *offsetBase, le_bool backtrack = FALSE);
++                                       GlyphIterator *glyphIterator, const LETableReference& offsetBase, LEErrorCode &success, le_bool backtrack = FALSE) {
++      LEReferenceToArrayOf<Offset> ref(offsetBase, success, coverageTableOffsetArray, glyphCount);
++      if( LE_FAILURE(success) ) { return FALSE; }
++      return matchGlyphCoverages(ref, glyphCount, glyphIterator, offsetBase, success, backtrack);
++    }
+ 
+     static void applySubstitutionLookups(
+         const LookupProcessor *lookupProcessor,
+-        const SubstitutionLookupRecord *substLookupRecordArray,
++        const LEReferenceToArrayOf<SubstitutionLookupRecord>& substLookupRecordArray,
+         le_uint16 substCount,
+         GlyphIterator *glyphIterator,
+         const LEFontInstance *fontInstance,
+@@ -79,7 +91,8 @@
+ 
+ struct ContextualSubstitutionSubtable : ContextualSubstitutionBase
+ {
+-    le_uint32  process(const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
++    le_uint32  process(const LETableReference &base, const LookupProcessor *lookupProcessor,
++                       GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ 
+ struct ContextualSubstitutionFormat1Subtable : ContextualSubstitutionSubtable
+@@ -87,7 +100,8 @@
+     le_uint16  subRuleSetCount;
+     Offset  subRuleSetTableOffsetArray[ANY_NUMBER];
+ 
+-    le_uint32  process(const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
++    le_uint32  process(const LETableReference &base, const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator,
++                       const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ LE_VAR_ARRAY(ContextualSubstitutionFormat1Subtable, subRuleSetTableOffsetArray)
+ 
+@@ -116,7 +130,7 @@
+     le_uint16  subClassSetCount;
+     Offset  subClassSetTableOffsetArray[ANY_NUMBER];
+ 
+-    le_uint32  process(const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
++    le_uint32  process(const LETableReference &base, const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ LE_VAR_ARRAY(ContextualSubstitutionFormat2Subtable, subClassSetTableOffsetArray)
+ 
+@@ -152,13 +166,15 @@
+     Offset  coverageTableOffsetArray[ANY_NUMBER];
+   //SubstitutionLookupRecord substLookupRecord[ANY_NUMBER];
+ 
+-    le_uint32  process(const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
++    le_uint32  process(const LETableReference &base, const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator,
++                       const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ LE_VAR_ARRAY(ContextualSubstitutionFormat3Subtable, coverageTableOffsetArray)
+ 
+ struct ChainingContextualSubstitutionSubtable : ContextualSubstitutionBase
+ {
+-    le_uint32  process(const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
++    le_uint32  process(const LEReferenceTo<ChainingContextualSubstitutionSubtable> &base, const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator,
++                       const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ 
+ struct ChainingContextualSubstitutionFormat1Subtable : ChainingContextualSubstitutionSubtable
+@@ -166,7 +182,8 @@
+     le_uint16  chainSubRuleSetCount;
+     Offset  chainSubRuleSetTableOffsetArray[ANY_NUMBER];
+ 
+-    le_uint32  process(const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
++    le_uint32  process(const LETableReference &base, const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator,
++                       const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ LE_VAR_ARRAY(ChainingContextualSubstitutionFormat1Subtable, chainSubRuleSetTableOffsetArray)
+ 
+@@ -201,7 +218,8 @@
+     le_uint16  chainSubClassSetCount;
+     Offset  chainSubClassSetTableOffsetArray[ANY_NUMBER];
+ 
+-    le_uint32  process(const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
++    le_uint32  process(const LETableReference &base, const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator,
++                       const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ LE_VAR_ARRAY(ChainingContextualSubstitutionFormat2Subtable, chainSubClassSetTableOffsetArray)
+ 
+@@ -243,7 +261,8 @@
+   //le_uint16  substCount;
+   //SubstitutionLookupRecord substLookupRecord[ANY_NUMBER];
+ 
+-    le_uint32  process(const LookupProcessor *lookupProcessor, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
++    le_uint32  process(const LETableReference &base, const LookupProcessor *lookupProcessor,
++                       GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ LE_VAR_ARRAY(ChainingContextualSubstitutionFormat3Subtable, backtrackCoverageTableOffsetArray)
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/CoverageTables.cpp openjdk/jdk/src/share/native/sun/font/layout/CoverageTables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/CoverageTables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/CoverageTables.cpp
+@@ -37,8 +37,10 @@
+ 
+ U_NAMESPACE_BEGIN
+ 
+-le_int32 CoverageTable::getGlyphCoverage(LEGlyphID glyphID) const
++le_int32 CoverageTable::getGlyphCoverage(const LETableReference &base, LEGlyphID glyphID, LEErrorCode &success) const
+ {
++  if(LE_FAILURE(success)) return -1;
++
+     switch(SWAPW(coverageFormat))
+     {
+     case 0:
+@@ -46,16 +48,16 @@
+ 
+     case 1:
+     {
+-        const CoverageFormat1Table *f1Table = (const CoverageFormat1Table *) this;
++      LEReferenceTo<CoverageFormat1Table> f1Table(base, success);
+ 
+-        return f1Table->getGlyphCoverage(glyphID);
++      return f1Table->getGlyphCoverage(f1Table, glyphID, success);
+     }
+ 
+     case 2:
+     {
+-        const CoverageFormat2Table *f2Table = (const CoverageFormat2Table *) this;
++      LEReferenceTo<CoverageFormat2Table> f2Table(base, success);
+ 
+-        return f2Table->getGlyphCoverage(glyphID);
++      return f2Table->getGlyphCoverage(f2Table, glyphID, success);
+     }
+ 
+     default:
+@@ -63,8 +65,10 @@
+     }
+ }
+ 
+-le_int32 CoverageFormat1Table::getGlyphCoverage(LEGlyphID glyphID) const
++le_int32 CoverageFormat1Table::getGlyphCoverage(LEReferenceTo<CoverageFormat1Table> &base, LEGlyphID glyphID, LEErrorCode &success) const
+ {
++  if(LE_FAILURE(success)) return -1;
++
+     TTGlyphID ttGlyphID = (TTGlyphID) LE_GET_GLYPH(glyphID);
+     le_uint16 count = SWAPW(glyphCount);
+     le_uint8 bit = OpenTypeUtilities::highBit(count);
+@@ -77,6 +81,10 @@
+                 return -1;
+         }
+ 
++    LEReferenceToArrayOf<TTGlyphID>(base, success, glyphArray, count);
++    if(LE_FAILURE(success)) return -1;  // range checks array
++
++
+     if (SWAPW(glyphArray[extra]) <= ttGlyphID) {
+         index = extra;
+     }
+@@ -96,14 +104,18 @@
+     return -1;
+ }
+ 
+-le_int32 CoverageFormat2Table::getGlyphCoverage(LEGlyphID glyphID) const
++le_int32 CoverageFormat2Table::getGlyphCoverage(LEReferenceTo<CoverageFormat2Table> &base, LEGlyphID glyphID, LEErrorCode &success) const
+ {
++  if(LE_FAILURE(success)) return -1;
++
+     TTGlyphID ttGlyphID = (TTGlyphID) LE_GET_GLYPH(glyphID);
+     le_uint16 count = SWAPW(rangeCount);
++
++    LEReferenceToArrayOf<GlyphRangeRecord> rangeRecordArrayRef(base, success, rangeRecordArray, count);
+     le_int32 rangeIndex =
+-        OpenTypeUtilities::getGlyphRangeIndex(ttGlyphID, rangeRecordArray, count);
++        OpenTypeUtilities::getGlyphRangeIndex(ttGlyphID, rangeRecordArrayRef, success);
+ 
+-    if (rangeIndex < 0) {
++    if (rangeIndex < 0 || LE_FAILURE(success)) { // could fail if array out of bounds
+         return -1;
+     }
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/CoverageTables.h openjdk/jdk/src/share/native/sun/font/layout/CoverageTables.h
+--- openjdk/jdk/src/share/native/sun/font/layout/CoverageTables.h
++++ openjdk/jdk/src/share/native/sun/font/layout/CoverageTables.h
+@@ -46,7 +46,7 @@
+ {
+     le_uint16 coverageFormat;
+ 
+-    le_int32 getGlyphCoverage(LEGlyphID glyphID) const;
++    le_int32 getGlyphCoverage(const LETableReference &base, LEGlyphID glyphID, LEErrorCode &success) const;
+ };
+ 
+ struct CoverageFormat1Table : CoverageTable
+@@ -54,7 +54,7 @@
+     le_uint16  glyphCount;
+     TTGlyphID glyphArray[ANY_NUMBER];
+ 
+-    le_int32 getGlyphCoverage(LEGlyphID glyphID) const;
++    le_int32 getGlyphCoverage(LEReferenceTo<CoverageFormat1Table> &base, LEGlyphID glyphID, LEErrorCode &success) const;
+ };
+ LE_VAR_ARRAY(CoverageFormat1Table, glyphArray)
+ 
+@@ -64,7 +64,7 @@
+     le_uint16        rangeCount;
+     GlyphRangeRecord rangeRecordArray[ANY_NUMBER];
+ 
+-    le_int32 getGlyphCoverage(LEGlyphID glyphID) const;
++    le_int32 getGlyphCoverage(LEReferenceTo<CoverageFormat2Table> &base, LEGlyphID glyphID, LEErrorCode &success) const;
+ };
+ LE_VAR_ARRAY(CoverageFormat2Table, rangeRecordArray)
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/CursiveAttachmentSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/CursiveAttachmentSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/CursiveAttachmentSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/CursiveAttachmentSubtables.cpp
+@@ -51,23 +51,27 @@
+     }
+ 
+     LEPoint entryAnchor, exitAnchor;
+-    Offset entryOffset = SWAPW(entryExitRecords[coverageIndex].entryAnchor); // TODO
++    Offset entryOffset = SWAPW(entryExitRecords[coverageIndex].entryAnchor);
+     Offset exitOffset  = SWAPW(entryExitRecords[coverageIndex].exitAnchor);
+ 
+     if (entryOffset != 0) {
+-        const AnchorTable *entryAnchorTable = (const AnchorTable *) ((char *) this + entryOffset);
++        LEReferenceTo<AnchorTable> entryAnchorTable(base, success, entryOffset);
+ 
+-        entryAnchorTable->getAnchor(glyphID, fontInstance, entryAnchor);
++        if( LE_SUCCESS(success) ) {
++          entryAnchorTable->getAnchor(entryAnchorTable, glyphID, fontInstance, entryAnchor, success);
+         glyphIterator->setCursiveEntryPoint(entryAnchor);
++        }
+     } else {
+         //glyphIterator->clearCursiveEntryPoint();
+     }
+ 
+     if (exitOffset != 0) {
+-        const AnchorTable *exitAnchorTable = (const AnchorTable *) ((char *) this + exitOffset);
++        LEReferenceTo<AnchorTable> exitAnchorTable(base, success, exitOffset);
+ 
+-        exitAnchorTable->getAnchor(glyphID, fontInstance, exitAnchor);
++        if( LE_SUCCESS(success) ) {
++          exitAnchorTable->getAnchor(exitAnchorTable, glyphID, fontInstance, exitAnchor, success);
+         glyphIterator->setCursiveExitPoint(exitAnchor);
++        }
+     } else {
+         //glyphIterator->clearCursiveExitPoint();
+     }
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/DeviceTables.cpp openjdk/jdk/src/share/native/sun/font/layout/DeviceTables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/DeviceTables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/DeviceTables.cpp
+@@ -43,7 +43,7 @@
+ 
+ #define FORMAT_COUNT LE_ARRAY_SIZE(fieldBits)
+ 
+-le_int16 DeviceTable::getAdjustment(le_uint16 ppem) const
++le_int16 DeviceTable::getAdjustment(const LEReferenceTo<DeviceTable>&base, le_uint16 ppem, LEErrorCode &success) const
+ {
+     le_uint16 start = SWAPW(startSize);
+     le_uint16 format = SWAPW(deltaFormat) - 1;
+@@ -53,6 +53,13 @@
+         le_uint16 sizeIndex = ppem - start;
+         le_uint16 bits = fieldBits[format];
+         le_uint16 count = 16 / bits;
++
++        LEReferenceToArrayOf<le_uint16> deltaValuesRef(base, success, deltaValues, (sizeIndex / count));
++
++        if(LE_FAILURE(success)) {
++          return result;
++        }
++
+         le_uint16 word = SWAPW(deltaValues[sizeIndex / count]);
+         le_uint16 fieldIndex = sizeIndex % count;
+         le_uint16 shift = 16 - (bits * (fieldIndex + 1));
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/DeviceTables.h openjdk/jdk/src/share/native/sun/font/layout/DeviceTables.h
+--- openjdk/jdk/src/share/native/sun/font/layout/DeviceTables.h
++++ openjdk/jdk/src/share/native/sun/font/layout/DeviceTables.h
+@@ -50,7 +50,7 @@
+     le_uint16  deltaFormat;
+     le_uint16  deltaValues[ANY_NUMBER];
+ 
+-    le_int16   getAdjustment(le_uint16 ppem) const;
++    le_int16   getAdjustment(const LEReferenceTo<DeviceTable> &base, le_uint16 ppem, LEErrorCode &success) const;
+ 
+ private:
+     static const le_uint16 fieldMasks[];
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ExtensionSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/ExtensionSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/ExtensionSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/ExtensionSubtables.cpp
+@@ -48,7 +48,6 @@
+                                      const LookupProcessor *lookupProcessor, le_uint16 lookupType,
+                                       GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const
+ {
+-
+     if (LE_FAILURE(success)) {
+         return 0;
+     }
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ExtensionSubtables.h openjdk/jdk/src/share/native/sun/font/layout/ExtensionSubtables.h
+--- openjdk/jdk/src/share/native/sun/font/layout/ExtensionSubtables.h
++++ openjdk/jdk/src/share/native/sun/font/layout/ExtensionSubtables.h
+@@ -52,8 +52,7 @@
+     le_uint16 extensionLookupType;
+     le_uint32 extensionOffset;
+ 
+-    le_uint32 process(const LEReferenceTo<ExtensionSubtable> &extRef,
+-                      const LookupProcessor *lookupProcessor, le_uint16 lookupType,
++    le_uint32 process(const LEReferenceTo<ExtensionSubtable> &base, const LookupProcessor *lookupProcessor, le_uint16 lookupType,
+                       GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode& success) const;
+ };
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/GDEFMarkFilter.cpp openjdk/jdk/src/share/native/sun/font/layout/GDEFMarkFilter.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/GDEFMarkFilter.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/GDEFMarkFilter.cpp
+@@ -49,9 +49,9 @@
+     // nothing to do?
+ }
+ 
+-le_bool GDEFMarkFilter::accept(LEGlyphID glyph) const
++le_bool GDEFMarkFilter::accept(LEGlyphID glyph, LEErrorCode &success) const
+ {
+-    le_int32 glyphClass = classDefTable->getGlyphClass(glyph);
++  le_int32 glyphClass = classDefTable->getGlyphClass(classDefTable, glyph, success);
+ 
+     return glyphClass == gcdMarkGlyph;
+ }
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/GDEFMarkFilter.h openjdk/jdk/src/share/native/sun/font/layout/GDEFMarkFilter.h
+--- openjdk/jdk/src/share/native/sun/font/layout/GDEFMarkFilter.h
++++ openjdk/jdk/src/share/native/sun/font/layout/GDEFMarkFilter.h
+@@ -55,7 +55,7 @@
+     GDEFMarkFilter(const LEReferenceTo<GlyphDefinitionTableHeader> &gdefTable, LEErrorCode &success);
+     virtual ~GDEFMarkFilter();
+ 
+-    virtual le_bool accept(LEGlyphID glyph) const;
++    virtual le_bool accept(LEGlyphID glyph, LEErrorCode &success) const;
+ };
+ 
+ U_NAMESPACE_END
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/GlyphIterator.cpp openjdk/jdk/src/share/native/sun/font/layout/GlyphIterator.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/GlyphIterator.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/GlyphIterator.cpp
+@@ -41,14 +41,13 @@
+ U_NAMESPACE_BEGIN
+ 
+ GlyphIterator::GlyphIterator(LEGlyphStorage &theGlyphStorage, GlyphPositionAdjustments *theGlyphPositionAdjustments, le_bool rightToLeft, le_uint16 theLookupFlags,
+-                             FeatureMask theFeatureMask, const LEReferenceTo<GlyphDefinitionTableHeader> &theGlyphDefinitionTableHeader)
++                             FeatureMask theFeatureMask, const LEReferenceTo<GlyphDefinitionTableHeader> &theGlyphDefinitionTableHeader, LEErrorCode &success)
+   : direction(1), position(-1), nextLimit(-1), prevLimit(-1),
+     glyphStorage(theGlyphStorage), glyphPositionAdjustments(theGlyphPositionAdjustments),
+     srcIndex(-1), destIndex(-1), lookupFlags(theLookupFlags), featureMask(theFeatureMask), glyphGroup(0),
+     glyphClassDefinitionTable(), markAttachClassDefinitionTable()
+ 
+ {
+-  LEErrorCode success = LE_NO_ERROR; // TODO
+     le_int32 glyphCount = glyphStorage.getGlyphCount();
+ 
+     if (theGlyphDefinitionTableHeader.isValid()) {
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/GlyphIterator.h openjdk/jdk/src/share/native/sun/font/layout/GlyphIterator.h
+--- openjdk/jdk/src/share/native/sun/font/layout/GlyphIterator.h
++++ openjdk/jdk/src/share/native/sun/font/layout/GlyphIterator.h
+@@ -49,7 +49,7 @@
+ class GlyphIterator : public UMemory {
+ public:
+     GlyphIterator(LEGlyphStorage &theGlyphStorage, GlyphPositionAdjustments *theGlyphPositionAdjustments, le_bool rightToLeft, le_uint16 theLookupFlags,
+-                  FeatureMask theFeatureMask, const LEReferenceTo<GlyphDefinitionTableHeader> &theGlyphDefinitionTableHeader);
++                  FeatureMask theFeatureMask, const LEReferenceTo<GlyphDefinitionTableHeader> &theGlyphDefinitionTableHeader, LEErrorCode &success);
+ 
+     GlyphIterator(GlyphIterator &that);
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/GlyphPosnLookupProc.cpp openjdk/jdk/src/share/native/sun/font/layout/GlyphPosnLookupProc.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/GlyphPosnLookupProc.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/GlyphPosnLookupProc.cpp
+@@ -95,6 +95,8 @@
+ 
+     le_uint32 delta = 0;
+ 
++    //_LETRACE("attempting lookupType #%d", lookupType);
++
+     switch(lookupType)
+     {
+     case 0:
+@@ -152,21 +154,21 @@
+     {
+         LEReferenceTo<ContextualPositioningSubtable> subtable(lookupSubtable, success);
+ 
+-        delta = subtable->process(this, glyphIterator, fontInstance, success);
++        delta = subtable->process(subtable, this , glyphIterator, fontInstance, success);
+         break;
+     }
+ 
+     case gpstChainedContext:
+     {
+-        LEReferenceTo<ChainingContextualPositioningSubtable> subtable(lookupSubtable, success);
++        const LEReferenceTo<ChainingContextualPositioningSubtable> subtable(lookupSubtable, success);
+ 
+-        delta = subtable->process(this, glyphIterator, fontInstance, success);
++        delta = subtable->process(subtable, this, glyphIterator, fontInstance, success);
+         break;
+     }
+ 
+     case gpstExtension:
+     {
+-        LEReferenceTo<ExtensionSubtable> subtable(lookupSubtable, success);
++        const LEReferenceTo<ExtensionSubtable> subtable(lookupSubtable, success);
+ 
+         delta = subtable->process(subtable, this, lookupType, glyphIterator, fontInstance, success);
+         break;
+@@ -176,6 +178,12 @@
+         break;
+     }
+ 
++#if LE_TRACE
++    if(delta != 0) {
++      _LETRACE("GlyphPositioningLookupProcessor applied #%d -> delta %d @ %d", lookupType, delta, glyphIterator->getCurrStreamPosition());
++    }
++#endif
++
+     return delta;
+ }
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/GlyphSubstLookupProc.cpp openjdk/jdk/src/share/native/sun/font/layout/GlyphSubstLookupProc.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/GlyphSubstLookupProc.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/GlyphSubstLookupProc.cpp
+@@ -123,7 +123,7 @@
+     {
+         const LEReferenceTo<ContextualSubstitutionSubtable> subtable(lookupSubtable, success);
+ 
+-        delta = subtable->process(this, glyphIterator, fontInstance, success);
++        delta = subtable->process(subtable, this, glyphIterator, fontInstance, success);
+         break;
+     }
+ 
+@@ -131,7 +131,7 @@
+     {
+         const LEReferenceTo<ChainingContextualSubstitutionSubtable> subtable(lookupSubtable, success);
+ 
+-        delta = subtable->process(this, glyphIterator, fontInstance, success);
++        delta = subtable->process(subtable, this, glyphIterator, fontInstance, success);
+         break;
+     }
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/IndicLayoutEngine.cpp openjdk/jdk/src/share/native/sun/font/layout/IndicLayoutEngine.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/IndicLayoutEngine.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/IndicLayoutEngine.cpp
+@@ -44,7 +44,7 @@
+ #include "LEGlyphStorage.h"
+ 
+ #include "IndicReordering.h"
+-#include <stdio.h>
++
+ U_NAMESPACE_BEGIN
+ 
+ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IndicOpenTypeLayoutEngine)
+@@ -90,6 +90,7 @@
+         return 0;
+     }
+ 
++    _LETRACE("IOTLE::gp, calling parent");
+     le_int32 retCount = OpenTypeLayoutEngine::glyphProcessing(chars, offset, count, max, rightToLeft, glyphStorage, success);
+ 
+     if (LE_FAILURE(success)) {
+@@ -97,10 +98,14 @@
+     }
+ 
+     if (fVersion2) {
++      _LETRACE("IOTLE::gp, v2 final,");
+         IndicReordering::finalReordering(glyphStorage,retCount);
++      _LETRACE("IOTLE::gp, v2 pres");
+         IndicReordering::applyPresentationForms(glyphStorage,retCount);
++      _LETRACE("IOTLE::gp, parent gsub");
+         OpenTypeLayoutEngine::glyphSubstitution(count,max, rightToLeft, glyphStorage, success);
+     } else {
++      _LETRACE("IOTLE::gp, adjust mpres");
+         IndicReordering::adjustMPres(fMPreFixups, glyphStorage, success);
+     }
+     return retCount;
+@@ -116,6 +121,8 @@
+         return 0;
+     }
+ 
++    _LETRACE("IOTLE: charProc");
++
+     if (chars == NULL || offset < 0 || count < 0 || max < 0 || offset >= max || offset + count > max) {
+         success = LE_ILLEGAL_ARGUMENT_ERROR;
+         return 0;
+@@ -143,8 +150,10 @@
+ 
+     le_int32 outCharCount;
+     if (fVersion2) {
++        _LETRACE("v2process");
+         outCharCount = IndicReordering::v2process(&chars[offset], count, fScriptCode, outChars, glyphStorage);
+     } else {
++        _LETRACE("reorder");
+         outCharCount = IndicReordering::reorder(&chars[offset], count, fScriptCode, outChars, glyphStorage, &fMPreFixups, success);
+     }
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/KernTable.cpp openjdk/jdk/src/share/native/sun/font/layout/KernTable.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/KernTable.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/KernTable.cpp
+@@ -39,7 +39,7 @@
+ 
+ #include <stdio.h>
+ 
+-#define DEBUG 0
++#define DEBUG_KERN_TABLE 0
+ 
+ U_NAMESPACE_BEGIN
+ 
+@@ -99,14 +99,14 @@
+   : pairs(), pairsSwapped(NULL), fTable(base)
+ {
+   if(LE_FAILURE(success) || (fTable.isEmpty())) {
+-#if DEBUG
++#if DEBUG_KERN_TABLE
+     fprintf(stderr, "no kern data\n");
+ #endif
+     return;
+   }
+   LEReferenceTo<KernTableHeader> header(fTable, success);
+ 
+-#if DEBUG
++#if DEBUG_KERN_TABLE
+   // dump first 32 bytes of header
+   for (int i = 0; i < 64; ++i) {
+     fprintf(stderr, "%0.2x ", ((const char*)header.getAlias())[i]&0xff);
+@@ -167,13 +167,13 @@
+         fprintf(stderr, "  searchRange: %d entrySelector: %d rangeShift: %d\n", searchRange, entrySelector, rangeShift);
+         fprintf(stderr, "[[ ignored font table entries: range %d selector %d shift %d ]]\n", SWAPW(table->searchRange), SWAPW(table->entrySelector), SWAPW(table->rangeShift));
+ #endif
+-#if DEBUG
++#if DEBUG_KERN_TABLE
+         fprintf(stderr, "coverage: %0.4x nPairs: %d pairs 0x%x\n", coverage, nPairs, pairs);
+         fprintf(stderr,
+           "  searchRange(pairs): %d entrySelector: %d rangeShift(pairs): %d\n",
+           searchRange, entrySelector, rangeShift);
+ 
+-        {
++        if (LE_SUCCESS(success)) {
+           // dump part of the pair list
+           char ids[256];
+           for (int i = 256; --i >= 0;) {
+@@ -238,7 +238,7 @@
+         p = tp;
+       }
+ 
+-#if DEBUG
++#if DEBUG_KERN_TABLE
+       fprintf(stderr, "binary search for %0.8x\n", key);
+ #endif
+ 
+@@ -247,13 +247,13 @@
+         probe >>= 1;
+         tp = (const PairInfo*)(p + (probe/KERN_PAIRINFO_SIZE));
+         le_uint32 tkey = tp->key;
+-#if DEBUG
++#if DEBUG_KERN_TABLE
+         fprintf(stdout, "   %.3d (%0.8x)\n", (tp - pairsSwapped), tkey);
+ #endif
+         if (tkey <= key) {
+           if (tkey == key) {
+             le_int16 value = SWAPW(tp->value);
+-#if DEBUG
++#if DEBUG_KERN_TABLE
+             fprintf(stdout, "binary found kerning pair %x:%x at %d, value: 0x%x (%g)\n",
+                     storage[i-1], storage[i], i, value & 0xffff, font->xUnitsToPoints(value));
+             fflush(stdout);
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LEFontInstance.h openjdk/jdk/src/share/native/sun/font/layout/LEFontInstance.h
+--- openjdk/jdk/src/share/native/sun/font/layout/LEFontInstance.h
++++ openjdk/jdk/src/share/native/sun/font/layout/LEFontInstance.h
+@@ -181,6 +181,10 @@
+      *
+      * Subclasses which represent composite fonts should always return <code>NULL</code>.
+      *
++     * Note that implementing this function does not allow for range checking.
++     * Subclasses that desire the safety of range checking must implement the
++     * variation which has a length parameter.
++     *
+      * @param tableTag - the four byte table tag. (e.g. 'cmap')
+      *
+      * @return the address of the table in memory, or <code>NULL</code>
+@@ -203,6 +207,8 @@
+      * Subclasses which represent composite fonts should always return <code>NULL</code>.
+      * 
+      * This version sets a length, for range checking.
++     * Note that range checking can only be accomplished if this function is
++     * implemented in subclasses.
+      *
+      * @param tableTag - the four byte table tag. (e.g. 'cmap') 
+      * @param length - ignored on entry, on exit will be the length of the table if known, or -1 if unknown.
+@@ -572,5 +578,3 @@
+ 
+ U_NAMESPACE_END
+ #endif
+-
+-
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LEGlyphFilter.h openjdk/jdk/src/share/native/sun/font/layout/LEGlyphFilter.h
+--- openjdk/jdk/src/share/native/sun/font/layout/LEGlyphFilter.h
++++ openjdk/jdk/src/share/native/sun/font/layout/LEGlyphFilter.h
+@@ -61,7 +61,7 @@
+      *
+      * @internal
+      */
+-    virtual le_bool accept(LEGlyphID glyph) const = 0;
++    virtual le_bool accept(LEGlyphID glyph, LEErrorCode &success) const = 0;
+ };
+ 
+ U_NAMESPACE_END
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LEGlyphStorage.cpp openjdk/jdk/src/share/native/sun/font/layout/LEGlyphStorage.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/LEGlyphStorage.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/LEGlyphStorage.cpp
+@@ -458,7 +458,7 @@
+       success = LE_INDEX_OUT_OF_BOUNDS_ERROR;
+       return;
+     }
+-
++    _LETRACE("set%-4d\t(%.2f, %.2f)", glyphIndex, x, y);
+     fPositions[glyphIndex * 2]     = x;
+     fPositions[glyphIndex * 2 + 1] = y;
+ }
+@@ -694,4 +694,3 @@
+ }
+ 
+ U_NAMESPACE_END
+-
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LEGlyphStorage.h openjdk/jdk/src/share/native/sun/font/layout/LEGlyphStorage.h
+--- openjdk/jdk/src/share/native/sun/font/layout/LEGlyphStorage.h
++++ openjdk/jdk/src/share/native/sun/font/layout/LEGlyphStorage.h
+@@ -568,4 +568,3 @@
+ 
+ U_NAMESPACE_END
+ #endif
+-
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LEScripts.h openjdk/jdk/src/share/native/sun/font/layout/LEScripts.h
+--- openjdk/jdk/src/share/native/sun/font/layout/LEScripts.h
++++ openjdk/jdk/src/share/native/sun/font/layout/LEScripts.h
+@@ -30,7 +30,7 @@
+  * WARNING: THIS FILE IS MACHINE GENERATED. DO NOT HAND EDIT IT UNLESS
+  * YOU REALLY KNOW WHAT YOU'RE DOING.
+  *
+- * Generated on: 10/26/2010 02:53:33 PM PDT
++ * Generated on: 11/01/2011 04:08:09 PM PDT
+  */
+ 
+ #ifndef __LESCRIPTS_H
+@@ -262,7 +262,16 @@
+     khojScriptCode = 157,
+     tirhScriptCode = 158,
+ 
+-    scriptCodeCount = 159
++/**
++ * @stable ICU 52
++ */
++    aghbScriptCode = 159,
++    mahjScriptCode = 160,
++
++/**
++ * @stable ICU 2.2
++ */
++    scriptCodeCount
+ };
+ 
+ U_NAMESPACE_END
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LEStandalone.h openjdk/jdk/src/share/native/sun/font/layout/LEStandalone.h
+--- openjdk/jdk/src/share/native/sun/font/layout/LEStandalone.h
++++ openjdk/jdk/src/share/native/sun/font/layout/LEStandalone.h
+@@ -132,6 +132,9 @@
+ #define uprv_memcpy memcpy
+ #define uprv_realloc realloc
+ 
++#define U_EXPORT2
++#define U_CAPI extern "C"
++
+ #if !defined(U_IS_BIG_ENDIAN)
+     #ifdef _LITTLE_ENDIAN
+         #define U_IS_BIG_ENDIAN 0
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LETableReference.h openjdk/jdk/src/share/native/sun/font/layout/LETableReference.h
+--- openjdk/jdk/src/share/native/sun/font/layout/LETableReference.h
++++ openjdk/jdk/src/share/native/sun/font/layout/LETableReference.h
+@@ -38,34 +38,47 @@
+ #include "LETypes.h"
+ #include "LEFontInstance.h"
+ 
++/**
++ * \def LE_ENABLE_RAW
++ * If this is 1, enables old non-safe raw access
++ */
++#ifndef LE_ENABLE_RAW
++#define LE_ENABLE_RAW 0
++#endif
+ 
+-#define kQuestionmarkTableTag  0x3F3F3F3FUL
+-#define kTildeTableTag  0x7e7e7e7eUL
++#define kQuestionmarkTableTag  0x3F3F3F3FUL /* ???? */
++#define kStaticTableTag  0x30303030UL  /* 0000 */
++#define kTildeTableTag  0x7e7e7e7eUL /* ~~~~ */
+ #ifdef __cplusplus
+ 
+ // internal - interface for range checking
+ U_NAMESPACE_BEGIN
+ 
+ #if LE_ASSERT_BAD_FONT
++
++#ifndef LE_TRACE_TR
++#define LE_TRACE_TR 0
++#endif
++
+ class LETableReference; // fwd
+ /**
+  *  defined in OpenTypeUtilities.cpp
+  * @internal
+  */
+-extern void _debug_LETableReference(const char *f, int l, const char *msg, const LETableReference *what, const void *ptr, size_t len);
++U_CAPI void U_EXPORT2 _debug_LETableReference(const char *f, int l, const char *msg, const LETableReference *what, const void *ptr, size_t len);
+ 
+ #define LE_DEBUG_TR(x) _debug_LETableReference(__FILE__, __LINE__, x, this, NULL, 0);
+ #define LE_DEBUG_TR3(x,y,z) _debug_LETableReference(__FILE__, __LINE__, x, this, (const void*)y, (size_t)z);
+-#if 0
+-#define LE_TRACE_TR(x) _debug_LETableReference(__FILE__, __LINE__, x, this, NULL, 0);
++#if LE_TRACE_TR
++#define _TRTRACE(x) _debug_LETableReference(__FILE__, __LINE__, x, this, NULL, 0);
+ #else
+-#define LE_TRACE_TR(x)
++#define _TRTRACE(x)
+ #endif
+ 
+ #else
+ #define LE_DEBUG_TR(x)
+ #define LE_DEBUG_TR3(x,y,z)
+-#define LE_TRACE_TR(x)
++#define _TRTRACE(x)
+ #endif
+ 
+ /**
+@@ -73,6 +86,13 @@
+  */
+ class LETableReference {
+ public:
++
++  /**
++   * Dummy enum asserting that a value is actually static data
++   * and does not need to be range checked
++   */
++  enum EStaticData { kStaticData = 0 };
++
+ /**
+  * @internal
+  * Construct from a specific tag
+@@ -80,28 +100,42 @@
+   LETableReference(const LEFontInstance* font, LETag tableTag, LEErrorCode &success) :
+     fFont(font), fTag(tableTag), fParent(NULL), fStart(NULL),fLength(LE_UINTPTR_MAX) {
+       loadTable(success);
+-    LE_TRACE_TR("INFO: new table load")
++    _TRTRACE("INFO: new table load")
+   }
+ 
+   LETableReference(const LETableReference &parent, LEErrorCode &success) : fFont(parent.fFont), fTag(parent.fTag), fParent(&parent), fStart(parent.fStart), fLength(parent.fLength) {
+     if(LE_FAILURE(success)) {
+       clear();
+     }
+-    LE_TRACE_TR("INFO: new clone")
++    _TRTRACE("INFO: new clone")
+   }
+ 
++#if LE_ENABLE_RAW
++   /**
++    * Construct  without a parent LETR.
++    */
+    LETableReference(const le_uint8* data, size_t length = LE_UINTPTR_MAX) :
+     fFont(NULL), fTag(kQuestionmarkTableTag), fParent(NULL), fStart(data), fLength(length) {
+-    LE_TRACE_TR("INFO: new raw")
++    _TRTRACE("INFO: new raw")
+   }
++#endif
++
++   /**
++    * Construct  without a parent LETR.
++    */
++ LETableReference(EStaticData /* NOTUSED */, const le_uint8* data, size_t length) :
++    fFont(NULL), fTag(kQuestionmarkTableTag), fParent(NULL), fStart(data), fLength(length) {
++    _TRTRACE("INFO: new EStaticData")
++  }
++
+   LETableReference() :
+     fFont(NULL), fTag(kQuestionmarkTableTag), fParent(NULL), fStart(NULL), fLength(0) {
+-    LE_TRACE_TR("INFO: new empty")
++    _TRTRACE("INFO: new empty")
+   }
+ 
+   ~LETableReference() {
+-    fTag=kTildeTableTag;
+-    LE_TRACE_TR("INFO: new dtor")
++    fTag= (LETag)kTildeTableTag;
++    _TRTRACE("INFO: new dtor")
+   }
+ 
+   /**
+@@ -127,7 +161,7 @@
+           fLength = (fParent->fLength) - offset; // decrement length as base address is incremented
+         }
+         if(fLength != LE_UINTPTR_MAX) {  // if we have bounds:
+-          if(offset+fLength > fParent->fLength) {
++          if((offset+fLength < offset) || (offset+fLength > fParent->fLength)) {
+             LE_DEBUG_TR3("offset+fLength out of range: (%p) +%d", NULL, offset+fLength);
+             err = LE_INDEX_OUT_OF_BOUNDS_ERROR; // exceeded
+             clear();
+@@ -137,11 +171,13 @@
+     } else {
+       clear();
+     }
+-    LE_TRACE_TR("INFO: new subset")
++    _TRTRACE("INFO: new subset")
+   }
+ 
+   const void* getAlias() const { return (const void*)fStart; }
+-  const void* getAliasTODO() const { LE_DEBUG_TR("getAliasTODO()"); return (const void*)fStart; }
++#ifndef LE_ENABLE_RAW
++  const void* getAliasRAW() const { LE_DEBUG_TR("getAliasRAW()"); return (const void*)fStart; }
++#endif
+   le_bool isEmpty() const { return fStart==NULL || fLength==0; }
+   le_bool isValid() const { return !isEmpty(); }
+   le_bool hasBounds() const { return fLength!=LE_UINTPTR_MAX; }
+@@ -234,7 +270,18 @@
+ 
+   void setRaw(const void *data, size_t length = LE_UINTPTR_MAX) {
+     fFont = NULL;
+-    fTag = kQuestionmarkTableTag;
++    fTag = (LETag)kQuestionmarkTableTag;
++    fParent = NULL;
++    fStart = (const le_uint8*)data;
++    fLength = length;
++  }
++
++  /**
++   * set this object pointing to static data
++   */
++  void setTo(EStaticData /*notused*/, const void *data, size_t length) {
++    fFont = NULL;
++    fTag = (LETag)kStaticTableTag;
+     fParent = NULL;
+     fStart = (const le_uint8*)data;
+     fLength = length;
+@@ -277,96 +324,6 @@
+  * Open a new entry based on an existing table
+  */
+ 
+-/**
+- * \def LE_UNBOUNDED_ARRAY
+- * define an array with no *known* bound. Will trim to available size.
+- * @internal
+- */
+-#define LE_UNBOUNDED_ARRAY LE_UINT32_MAX
+-
+-template<class T>
+-class LEReferenceToArrayOf : public LETableReference {
+-public:
+-  LEReferenceToArrayOf(const LETableReference &parent, LEErrorCode &success, size_t offset, le_uint32 count)
+-    : LETableReference(parent, offset, LE_UINTPTR_MAX, success), fCount(count) {
+-    LE_TRACE_TR("INFO: new RTAO by offset")
+-    if(LE_SUCCESS(success)) {
+-      if(count == LE_UNBOUNDED_ARRAY) { // not a known length
+-        count = getLength()/LETableVarSizer<T>::getSize(); // fit to max size
+-      }
+-      LETableReference::verifyLength(0, LETableVarSizer<T>::getSize()*count, success);
+-    }
+-    if(LE_FAILURE(success)) {
+-      fCount=0;
+-      clear();
+-    }
+-  }
+-
+-  LEReferenceToArrayOf(const LETableReference &parent, LEErrorCode &success, const T* array, le_uint32 count)
+-    : LETableReference(parent, parent.ptrToOffset(array, success), LE_UINTPTR_MAX, success), fCount(count) {
+-LE_TRACE_TR("INFO: new RTAO")
+-    if(LE_SUCCESS(success)) {
+-      if(count == LE_UNBOUNDED_ARRAY) { // not a known length
+-        count = getLength()/LETableVarSizer<T>::getSize(); // fit to max size
+-      }
+-      LETableReference::verifyLength(0, LETableVarSizer<T>::getSize()*count, success);
+-    }
+-    if(LE_FAILURE(success)) clear();
+-  }
+- LEReferenceToArrayOf(const LETableReference &parent, LEErrorCode &success, const T* array, size_t offset, le_uint32 count)
+-   : LETableReference(parent, parent.ptrToOffset(array, success)+offset, LE_UINTPTR_MAX, success), fCount(count) {
+-LE_TRACE_TR("INFO: new RTAO")
+-    if(LE_SUCCESS(success)) {
+-      if(count == LE_UNBOUNDED_ARRAY) { // not a known length
+-        count = getLength()/LETableVarSizer<T>::getSize(); // fit to max size
+-      }
+-      LETableReference::verifyLength(0, LETableVarSizer<T>::getSize()*count, success);
+-    }
+-    if(LE_FAILURE(success)) clear();
+-  }
+-
+- LEReferenceToArrayOf() :LETableReference(), fCount(0) {}
+-
+-  le_uint32 getCount() const { return fCount; }
+-
+-  using LETableReference::getAlias;
+-
+-  const T *getAlias(le_uint32 i, LEErrorCode &success) const {
+-    return ((const T*)(((const char*)getAlias())+getOffsetFor(i, success)));
+-  }
+-
+-  const T *getAliasTODO() const { LE_DEBUG_TR("getAliasTODO<>"); return (const T*)fStart; }
+-
+-  const T& getObject(le_uint32 i, LEErrorCode &success) const {
+-    return *getAlias(i,success);
+-  }
+-
+-  const T& operator()(le_uint32 i, LEErrorCode &success) const {
+-    return *getAlias(i,success);
+-  }
+-
+-  size_t getOffsetFor(le_uint32 i, LEErrorCode &success) const {
+-    if(LE_SUCCESS(success)&&i<getCount()) {
+-      return LETableVarSizer<T>::getSize()*i;
+-    } else {
+-      success = LE_INDEX_OUT_OF_BOUNDS_ERROR;
+-    }
+-    return 0;
+-  }
+-
+-  LEReferenceToArrayOf<T> &reparent(const LETableReference &base) {
+-    fParent = &base;
+-    return *this;
+-  }
+-
+- LEReferenceToArrayOf(const LETableReference& parent, LEErrorCode & success) : LETableReference(parent,0, LE_UINTPTR_MAX, success), fCount(0) {
+-    LE_TRACE_TR("INFO: null RTAO")
+-  }
+-
+-private:
+-  le_uint32 fCount;
+-};
+-
+ 
+ template<class T>
+ class LEReferenceTo : public LETableReference {
+@@ -405,14 +362,26 @@
+     verifyLength(0, LETableVarSizer<T>::getSize(), success);
+     if(LE_FAILURE(success)) clear();
+   }
++#if LE_ENABLE_RAW
+  inline LEReferenceTo(const le_uint8 *data, size_t length = LE_UINTPTR_MAX) : LETableReference(data, length) {}
+  inline LEReferenceTo(const T *data, size_t length = LE_UINTPTR_MAX) : LETableReference((const le_uint8*)data, length) {}
+- inline LEReferenceTo() : LETableReference(NULL) {}
++#endif
++ inline LEReferenceTo(EStaticData staticData, const le_uint8 *data, size_t length) : LETableReference(staticData, data, length) {}
++ inline LEReferenceTo(EStaticData staticData, const T *data, size_t length) : LETableReference(staticData, (const le_uint8*)data, length) {}
+ 
++ inline LEReferenceTo() : LETableReference() {}
++
++#if LE_ENABLE_RAW
+  inline LEReferenceTo<T>& operator=(const T* other) {
+     setRaw(other);
+     return *this;
+   }
++#endif
++
++ LEReferenceTo<T>& setTo(LETableReference::EStaticData staticData, const T* other, size_t length) {
++   LETableReference::setTo(staticData, other, length);
++   return *this;
++ }
+ 
+   LEReferenceTo<T> &reparent(const LETableReference &base) {
+     fParent = &base;
+@@ -431,11 +400,135 @@
+   }
+ 
+   const T *operator->() const { return getAlias(); }
++  const T *operator*() const { return getAlias(); }
+   const T *getAlias() const { return (const T*)fStart; }
+-  const T *getAliasTODO() const { LE_DEBUG_TR("getAliasTODO<>"); return (const T*)fStart; }
++#if LE_ENABLE_RAW
++  const T *getAliasRAW() const { LE_DEBUG_TR("getAliasRAW<>"); return (const T*)fStart; }
++#endif
++
+ };
+ 
+ 
++/**
++ * \def LE_UNBOUNDED_ARRAY
++ * define an array with no *known* bound. Will trim to available size.
++ * @internal
++ */
++#define LE_UNBOUNDED_ARRAY LE_UINT32_MAX
++
++template<class T>
++class LEReferenceToArrayOf : public LETableReference {
++public:
++  LEReferenceToArrayOf(const LETableReference &parent, LEErrorCode &success, size_t offset, le_uint32 count)
++    : LETableReference(parent, offset, LE_UINTPTR_MAX, success), fCount(count) {
++    _TRTRACE("INFO: new RTAO by offset")
++    if(LE_SUCCESS(success)) {
++      if(fCount == LE_UNBOUNDED_ARRAY) { // not a known length
++        fCount = getLength()/LETableVarSizer<T>::getSize(); // fit to max size
++      }
++      LETableReference::verifyLength(0, LETableVarSizer<T>::getSize()*fCount, success);
++    }
++    if(LE_FAILURE(success)) {
++      fCount=0;
++      clear();
++    }
++  }
++
++  LEReferenceToArrayOf(const LETableReference &parent, LEErrorCode &success, const T* array, le_uint32 count)
++    : LETableReference(parent, parent.ptrToOffset(array, success), LE_UINTPTR_MAX, success), fCount(count) {
++_TRTRACE("INFO: new RTAO")
++    if(LE_SUCCESS(success)) {
++      if(fCount == LE_UNBOUNDED_ARRAY) { // not a known length
++        fCount = getLength()/LETableVarSizer<T>::getSize(); // fit to max size
++      }
++      LETableReference::verifyLength(0, LETableVarSizer<T>::getSize()*fCount, success);
++    }
++    if(LE_FAILURE(success)) clear();
++  }
++ LEReferenceToArrayOf(const LETableReference &parent, LEErrorCode &success, const T* array, size_t offset, le_uint32 count)
++   : LETableReference(parent, parent.ptrToOffset(array, success)+offset, LE_UINTPTR_MAX, success), fCount(count) {
++_TRTRACE("INFO: new RTAO")
++    if(LE_SUCCESS(success)) {
++      if(fCount == LE_UNBOUNDED_ARRAY) { // not a known length
++        fCount = getLength()/LETableVarSizer<T>::getSize(); // fit to max size
++      }
++      LETableReference::verifyLength(0, LETableVarSizer<T>::getSize()*fCount, success);
++    }
++    if(LE_FAILURE(success)) clear();
++  }
++
++ LEReferenceToArrayOf() :LETableReference(), fCount(0) {}
++
++  le_uint32 getCount() const { return fCount; }
++
++  const T *getAlias() const { return (const T*)fStart; }
++
++  const T *getAlias(le_uint32 i, LEErrorCode &success) const {
++    return ((const T*)(((const char*)getAlias())+getOffsetFor(i, success)));
++  }
++
++#ifndef LE_ENABLE_RAW
++  const T *getAliasRAW() const { LE_DEBUG_TR("getAliasRAW<>"); return (const T*)fStart; }
++#endif
++
++  const T& getObject(le_uint32 i, LEErrorCode &success) const {
++    return *getAlias(i,success);
++  }
++
++  /**
++   * by-value array accessor for integral types.
++   */
++  const T operator[](le_uint32 i) const {
++    LEErrorCode success = LE_NO_ERROR;
++    const T *ret = getAlias(i, success);
++    if(LE_FAILURE(success) || ret==NULL) {
++#if LE_ASSERT_BAD_FONT
++      LE_DEBUG_TR3("Range error, out of bounds? (%p) #%d", NULL, i);
++#endif
++      return T(0); // will not work for all types.
++    }
++    return *ret;
++  }
++
++  const LEReferenceTo<T> getReference(le_uint32 i, LEErrorCode &success) const {
++    if(LE_FAILURE(success)) return LEReferenceTo<T>();
++    return LEReferenceTo<T>(*this, success, getAlias(i,success));
++  }
++
++  const T& operator()(le_uint32 i, LEErrorCode &success) const {
++    return *getAlias(i,success);
++  }
++
++  size_t getOffsetFor(le_uint32 i, LEErrorCode &success) const {
++    if(LE_SUCCESS(success)&&i<getCount()) {
++      return LETableVarSizer<T>::getSize()*i;
++    } else {
++      LE_DEBUG_TR3("getOffsetFor failed (%p) index=%d",NULL, i);
++      success = LE_INDEX_OUT_OF_BOUNDS_ERROR;
++    }
++    return 0;
++  }
++
++  LEReferenceToArrayOf<T> &reparent(const LETableReference &base) {
++    fParent = &base;
++    return *this;
++  }
++
++ LEReferenceToArrayOf(const LETableReference& parent, LEErrorCode & success) : LETableReference(parent,0, LE_UINTPTR_MAX, success), fCount(0) {
++    _TRTRACE("INFO: null RTAO")
++  }
++
++private:
++  le_uint32 fCount;
++};
++
++
++
++
++#ifdef _TRTRACE
++#undef _TRTRACE
++#endif
++
+ U_NAMESPACE_END
+ 
+ #endif
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LETypes.h openjdk/jdk/src/share/native/sun/font/layout/LETypes.h
+--- openjdk/jdk/src/share/native/sun/font/layout/LETypes.h
++++ openjdk/jdk/src/share/native/sun/font/layout/LETypes.h
+@@ -312,6 +312,20 @@
+  */
+ #define LE_SET_CLIENT(gid, client) ((gid & ~LE_CLIENT_MASK) | ((client << LE_CLIENT_SHIFT) & LE_CLIENT_MASK))
+ 
++/**
++ * \def LE_TRACE
++ * @internal
++ */
++#ifndef LE_TRACE
++# define LE_TRACE 0
++#endif
++
++#if LE_TRACE
++# include <stdio.h>
++# define _LETRACE printf("\n%s:%d: LE: ", __FILE__, __LINE__),printf
++#else
++# define _LETRACE 0&&
++#endif
+ 
+ /**
+  * Used to represent 16-bit Unicode code points.
+@@ -656,7 +670,7 @@
+  *
+  * @stable ICU 2.4
+  */
+-#ifndef LE_FAILURE
++#ifndef LE_SUCCESS
+ #define LE_SUCCESS(code) (U_SUCCESS((UErrorCode)code))
+ #endif
+ 
+@@ -666,12 +680,21 @@
+  LE_CHAR_FILTER_FEATURE_ENUM = 31,
+ };
+ 
++
++/**
++ * Flags for typographic features.
++ * @internal
++ * @{
++ */
+ #define LE_Kerning_FEATURE_FLAG (1 << LE_Kerning_FEATURE_ENUM)
+ #define LE_Ligatures_FEATURE_FLAG (1 << LE_Ligatures_FEATURE_ENUM)
+ 
+ #define LE_CHAR_FILTER_FEATURE_ENUM 31
+ 
+ #define LE_CHAR_FILTER_FEATURE_FLAG (1 << LE_CHAR_FILTER_FEATURE_ENUM)
++/**
++ * @}
++ */
+ 
+ #define LE_DEFAULT_FEATURE_FLAG (LE_Kerning_FEATURE_FLAG | LE_Ligatures_FEATURE_FLAG) /**< default features */
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LayoutEngine.cpp openjdk/jdk/src/share/native/sun/font/layout/LayoutEngine.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/LayoutEngine.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/LayoutEngine.cpp
+@@ -150,7 +150,7 @@
+     CanonMarkFilter(const LEReferenceTo<GlyphDefinitionTableHeader> &gdefTable, LEErrorCode &success);
+     virtual ~CanonMarkFilter();
+ 
+-    virtual le_bool accept(LEGlyphID glyph) const;
++    virtual le_bool accept(LEGlyphID glyph, LEErrorCode &success) const;
+ };
+ 
+ CanonMarkFilter::CanonMarkFilter(const LEReferenceTo<GlyphDefinitionTableHeader> &gdefTable, LEErrorCode &success)
+@@ -163,9 +163,8 @@
+     // nothing to do?
+ }
+ 
+-le_bool CanonMarkFilter::accept(LEGlyphID glyph) const
++le_bool CanonMarkFilter::accept(LEGlyphID glyph, LEErrorCode &success) const
+ {
+-  LEErrorCode success = LE_NO_ERROR;
+   le_int32 glyphClass = classDefTable->getGlyphClass(classDefTable, glyph, success);
+   if(LE_FAILURE(success)) return false;
+   return glyphClass != 0;
+@@ -253,7 +252,9 @@
+         return 0;
+     }
+ 
+-    LEReferenceTo<GlyphSubstitutionTableHeader> canonGSUBTable((GlyphSubstitutionTableHeader *) CanonShaping::glyphSubstitutionTable);
++    LEReferenceTo<GlyphSubstitutionTableHeader> canonGSUBTable(LETableReference::kStaticData,
++                                                               (GlyphSubstitutionTableHeader *) CanonShaping::glyphSubstitutionTable,
++                                                               CanonShaping::glyphSubstitutionTableLen);
+     LETag scriptTag  = OpenTypeLayoutEngine::getScriptTag(fScriptCode);
+     LETag langSysTag = OpenTypeLayoutEngine::getLangSysTag(fLanguageCode);
+     le_int32 i, dir = 1, out = 0, outCharCount = count;
+@@ -313,7 +314,8 @@
+           LE_DELETE_ARRAY(reordered);
+         }
+ 
+-        outCharCount = canonGSUBTable->process(canonGSUBTable, fakeGlyphStorage, rightToLeft, scriptTag, langSysTag, (const GlyphDefinitionTableHeader*)NULL, substitutionFilter, canonFeatureMap, canonFeatureMapCount, FALSE, success);
++        const LEReferenceTo<GlyphDefinitionTableHeader>  noGDEF; // empty gdef header
++        outCharCount = canonGSUBTable->process(canonGSUBTable, fakeGlyphStorage, rightToLeft, scriptTag, langSysTag, noGDEF, substitutionFilter, canonFeatureMap, canonFeatureMapCount, FALSE, success);
+ 
+         if (LE_FAILURE(success)) {
+             delete substitutionFilter;
+@@ -393,10 +395,13 @@
+         LEPoint advance;
+ 
+         glyphStorage.setPosition(i, x, y, success);
++        _LETRACE("g#%-4d (%.2f, %.2f)", i, x, y);
+ 
+         fFontInstance->getGlyphAdvance(glyphStorage[i], advance);
+         x += advance.fX;
+         y += advance.fY;
++
++
+     }
+ 
+     glyphStorage.setPosition(glyphCount, x, y, success);
+@@ -414,7 +419,7 @@
+         return;
+     }
+ 
+-    LEReferenceTo<GlyphDefinitionTableHeader> gdefTable((GlyphDefinitionTableHeader *) CanonShaping::glyphDefinitionTable,
++    LEReferenceTo<GlyphDefinitionTableHeader> gdefTable(LETableReference::kStaticData, (GlyphDefinitionTableHeader *) CanonShaping::glyphDefinitionTable,
+                                                         CanonShaping::glyphDefinitionTableLen);
+     CanonMarkFilter filter(gdefTable, success);
+ 
+@@ -454,9 +459,10 @@
+         glyphStorage.getGlyphPosition(p + 1, next, ignore, success);
+ 
+         xAdvance = next - prev;
++        _LETRACE("p#%d (%.2f,%.2f)", p, xAdvance, 0);
+         glyphStorage.adjustPosition(p, xAdjust, 0, success);
+ 
+-        if (markFilter->accept(glyphStorage[p])) {
++        if (markFilter->accept(glyphStorage[p], success)) {
+             xAdjust -= xAdvance;
+         }
+ 
+@@ -496,9 +502,13 @@
+         glyphStorage.getGlyphPosition(p + 1, next, ignore, success);
+ 
+         xAdvance = next - prev;
++
++        _LETRACE("p#%d (%.2f,%.2f)", p, xAdvance, 0);
++
++
+         glyphStorage.adjustPosition(p, xAdjust, 0, success);
+ 
+-        if (markFilter->accept(chars[c])) {
++        if (markFilter->accept(chars[c], success)) {
+             xAdjust -= xAdvance;
+         }
+ 
+@@ -669,7 +679,6 @@
+             }
+ 
+             case arabScriptCode:
+-            //case hebrScriptCode:
+                 result = new UnicodeArabicOpenTypeLayoutEngine(fontInstance, scriptCode, languageCode, typoFlags, success);
+                 break;
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LayoutEngine.h openjdk/jdk/src/share/native/sun/font/layout/LayoutEngine.h
+--- openjdk/jdk/src/share/native/sun/font/layout/LayoutEngine.h
++++ openjdk/jdk/src/share/native/sun/font/layout/LayoutEngine.h
+@@ -147,8 +147,8 @@
+      * @param fontInstance - the font for the text
+      * @param scriptCode - the script for the text
+      * @param languageCode - the language for the text
+-     * @param typoFlags - the typographic control flags for the text.  Set bit 1 if kerning
+-     * is desired, set bit 2 if ligature formation is desired.  Others are reserved.
++     * @param typoFlags - the typographic control flags for the text (a bitfield).  Use kTypoFlagKern
++     * if kerning is desired, kTypoFlagLiga if ligature formation is desired.  Others are reserved.
+      * @param success - set to an error code if the operation fails
+      *
+      * @see LEFontInstance
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LigatureSubstSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/LigatureSubstSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/LigatureSubstSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/LigatureSubstSubtables.cpp
+@@ -49,14 +49,20 @@
+       return 0;
+     }
+ 
+-    if (coverageIndex >= 0) {
++    LEReferenceToArrayOf<Offset> ligSetTableOffsetArrayRef(base, success, ligSetTableOffsetArray, SWAPW(ligSetCount));
++
++    if (coverageIndex >= 0 && LE_SUCCESS(success) && (le_uint32)coverageIndex < ligSetTableOffsetArrayRef.getCount()) {
+         Offset ligSetTableOffset = SWAPW(ligSetTableOffsetArray[coverageIndex]);
+-        const LigatureSetTable *ligSetTable = (const LigatureSetTable *) ((char *) this + ligSetTableOffset);
++        LEReferenceTo<LigatureSetTable>   ligSetTable(base, success, ligSetTableOffset);
++
++        if( LE_FAILURE(success) ) { return 0; }
+         le_uint16 ligCount = SWAPW(ligSetTable->ligatureCount);
+ 
+-        for (le_uint16 lig = 0; lig < ligCount; lig += 1) {
++        LEReferenceTo<Offset> ligatureTableOffsetArray(base, success, ligSetTable->ligatureTableOffsetArray, ligCount);
++        for (le_uint16 lig = 0; LE_SUCCESS(success) && lig < ligCount; lig += 1) {
+             Offset ligTableOffset = SWAPW(ligSetTable->ligatureTableOffsetArray[lig]);
+-            const LigatureTable *ligTable = (const LigatureTable *) ((char *)ligSetTable + ligTableOffset);
++            LEReferenceTo<LigatureTable>   ligTable(ligSetTable, success, ligTableOffset);
++            if(LE_FAILURE(success)) { return 0; }
+             le_uint16 compCount = SWAPW(ligTable->compCount) - 1;
+             le_int32 startPosition = glyphIterator->getCurrStreamPosition();
+             TTGlyphID ligGlyph = SWAPW(ligTable->ligGlyph);
+@@ -72,7 +78,7 @@
+                 }
+             }
+ 
+-            if (comp == compCount && (filter == NULL || filter->accept(LE_SET_GLYPH(glyph, ligGlyph)))) {
++            if (comp == compCount && (filter == NULL || filter->accept(LE_SET_GLYPH(glyph, ligGlyph), success))) {
+                 GlyphIterator tempIterator(*glyphIterator);
+                 TTGlyphID deletedGlyph = tempIterator.ignoresMarks()? 0xFFFE : 0xFFFF;
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/LookupProcessor.cpp openjdk/jdk/src/share/native/sun/font/layout/LookupProcessor.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/LookupProcessor.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/LookupProcessor.cpp
+@@ -60,8 +60,10 @@
+       LEReferenceTo<LookupSubtable> lookupSubtable = lookupTable->getLookupSubtable(lookupTable, subtable, success);
+ 
+         delta = applySubtable(lookupSubtable, lookupType, glyphIterator, fontInstance, success);
+-
+-        if (delta > 0 || LE_FAILURE(success)) {
++        if (delta > 0 && LE_FAILURE(success)) {
++#if LE_TRACE
++          _LETRACE("Posn #%d, type %X, applied subtable #%d/%d - %s\n", startPosition, lookupType, subtable, subtableCount, u_errorName((UErrorCode)success));
++#endif
+             return 1;
+         }
+ 
+@@ -86,7 +88,7 @@
+     }
+ 
+     GlyphIterator glyphIterator(glyphStorage, glyphPositionAdjustments,
+-                                rightToLeft, 0, 0, glyphDefinitionTableHeader);
++                                rightToLeft, 0, 0, glyphDefinitionTableHeader, success);
+     le_int32 newGlyphCount = glyphCount;
+ 
+     for (le_uint16 order = 0; order < lookupOrderCount && LE_SUCCESS(success); order += 1) {
+@@ -94,6 +96,7 @@
+         FeatureMask selectMask = lookupSelectArray[lookup];
+ 
+         if (selectMask != 0) {
++            _LETRACE("Processing order#%d/%d", order, lookupOrderCount);
+             const LEReferenceTo<LookupTable> lookupTable = lookupListTable->getLookupTable(lookupListTable, lookup, success);
+             if (!lookupTable.isValid() ||LE_FAILURE(success) ) {
+                continue;
+@@ -103,8 +106,11 @@
+             glyphIterator.reset(lookupFlags, selectMask);
+ 
+             while (glyphIterator.findFeatureTag()) {
+-              applyLookupTable(lookupTable, &glyphIterator, fontInstance, success); // TODO
++                applyLookupTable(lookupTable, &glyphIterator, fontInstance, success);
+                 if (LE_FAILURE(success)) {
++#if LE_TRACE
++                    _LETRACE("Failure for lookup 0x%x - %s\n", lookup, u_errorName((UErrorCode)success));
++#endif
+                     return 0;
+                 }
+             }
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/Lookups.cpp openjdk/jdk/src/share/native/sun/font/layout/Lookups.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/Lookups.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/Lookups.cpp
+@@ -65,7 +65,7 @@
+ 
+   if(LE_FAILURE(success)) return 0;
+ 
+-  return coverageTable->getGlyphCoverage(glyphID);
++  return coverageTable->getGlyphCoverage(coverageTable, glyphID, success);
+ }
+ 
+ U_NAMESPACE_END
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/MarkArrays.cpp openjdk/jdk/src/share/native/sun/font/layout/MarkArrays.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/MarkArrays.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/MarkArrays.cpp
+@@ -38,20 +38,28 @@
+ 
+ U_NAMESPACE_BEGIN
+ 
+-le_int32 MarkArray::getMarkClass(LEGlyphID glyphID, le_int32 coverageIndex, const LEFontInstance *fontInstance,
+-                              LEPoint &anchor) const
++le_int32 MarkArray::getMarkClass(const LETableReference &base, LEGlyphID glyphID,
++                                 le_int32 coverageIndex, const LEFontInstance *fontInstance,
++                              LEPoint &anchor, LEErrorCode &success) const
+ {
+     le_int32 markClass = -1;
+ 
+-    if (coverageIndex >= 0) {
++    if ( coverageIndex >= 0 && LE_SUCCESS(success) ) {
+         le_uint16 mCount = SWAPW(markCount);
+-
+         if (coverageIndex < mCount) {
++          LEReferenceToArrayOf<MarkRecord> markRecordArrayRef(base, success, markRecordArray, mCount);
++            if(LE_FAILURE(success)) {
++              return markClass;
++            }
+             const MarkRecord *markRecord = &markRecordArray[coverageIndex];
+             Offset anchorTableOffset = SWAPW(markRecord->markAnchorTableOffset);
+-            const AnchorTable *anchorTable = (AnchorTable *) ((char *) this + anchorTableOffset);
++            LEReferenceTo<AnchorTable> anchorTable(base, success, anchorTableOffset);
+ 
+-            anchorTable->getAnchor(glyphID, fontInstance, anchor);
++            if(LE_FAILURE(success)) {
++              return markClass;
++            }
++
++            anchorTable->getAnchor(anchorTable, glyphID, fontInstance, anchor, success);
+             markClass = SWAPW(markRecord->markClass);
+         }
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/MarkArrays.h openjdk/jdk/src/share/native/sun/font/layout/MarkArrays.h
+--- openjdk/jdk/src/share/native/sun/font/layout/MarkArrays.h
++++ openjdk/jdk/src/share/native/sun/font/layout/MarkArrays.h
+@@ -54,8 +54,9 @@
+     le_uint16   markCount;
+     MarkRecord  markRecordArray[ANY_NUMBER];
+ 
+-    le_int32 getMarkClass(LEGlyphID glyphID, le_int32 coverageIndex, const LEFontInstance *fontInstance,
+-        LEPoint &anchor) const;
++    le_int32 getMarkClass(const LETableReference &base, LEGlyphID glyphID,
++                       le_int32 coverageIndex, const LEFontInstance *fontInstance,
++                       LEPoint &anchor, LEErrorCode &success) const;
+ };
+ LE_VAR_ARRAY(MarkArray, markRecordArray)
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/MarkToBasePosnSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/MarkToBasePosnSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/MarkToBasePosnSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/MarkToBasePosnSubtables.cpp
+@@ -66,11 +66,11 @@
+     }
+ 
+     LEPoint markAnchor;
+-    const MarkArray *markArray = (const MarkArray *) ((char *) this + SWAPW(markArrayOffset));
+-    le_int32 markClass = markArray->getMarkClass(markGlyph, markCoverage, fontInstance, markAnchor);
++    LEReferenceTo<MarkArray> markArray(base, success,  (const MarkArray *) ((char *) this + SWAPW(markArrayOffset)));
++    le_int32 markClass = markArray->getMarkClass(markArray, markGlyph, markCoverage, fontInstance, markAnchor, success);
+     le_uint16 mcCount = SWAPW(classCount);
+ 
+-    if (markClass < 0 || markClass >= mcCount) {
++    if (markClass < 0 || markClass >= mcCount || LE_FAILURE(success)) {
+         // markGlyph isn't in the mark array or its
+         // mark class is too big. The table is mal-formed!
+         return 0;
+@@ -80,7 +80,8 @@
+     GlyphIterator baseIterator(*glyphIterator, (le_uint16) (lfIgnoreMarks /*| lfIgnoreLigatures*/));
+     LEGlyphID baseGlyph = findBaseGlyph(&baseIterator);
+     le_int32 baseCoverage = getBaseCoverage(base, (LEGlyphID) baseGlyph, success);
+-    const BaseArray *baseArray = (const BaseArray *) ((char *) this + SWAPW(baseArrayOffset));
++    LEReferenceTo<BaseArray> baseArray(base, success, (const BaseArray *) ((char *) this + SWAPW(baseArrayOffset)));
++    if(LE_FAILURE(success)) return 0;
+     le_uint16 baseCount = SWAPW(baseArray->baseRecordCount);
+ 
+     if (baseCoverage < 0 || baseCoverage >= baseCount) {
+@@ -89,19 +90,23 @@
+         // table is mal-formed...
+         return 0;
+     }
++    LEReferenceTo<BaseRecord> baseRecord(base, success, &baseArray->baseRecordArray[baseCoverage * mcCount]);
++    if( LE_FAILURE(success) ) { return 0; }
++    LEReferenceToArrayOf<Offset> baseAnchorTableOffsetArray(base, success, &(baseRecord->baseAnchorTableOffsetArray[0]), markClass+1);
+ 
+-    const BaseRecord *baseRecord = &baseArray->baseRecordArray[baseCoverage * mcCount];
++    if( LE_FAILURE(success) ) { return 0; }
+     Offset anchorTableOffset = SWAPW(baseRecord->baseAnchorTableOffsetArray[markClass]);
+-    const AnchorTable *anchorTable = (const AnchorTable *) ((char *) baseArray + anchorTableOffset);
+-    LEPoint baseAnchor, markAdvance, pixels;
+-
+-    if (anchorTableOffset == 0) {
++    if (anchorTableOffset <= 0) {
+         // this means the table is mal-formed...
+         glyphIterator->setCurrGlyphBaseOffset(baseIterator.getCurrStreamPosition());
+         return 0;
+     }
+ 
+-    anchorTable->getAnchor(baseGlyph, fontInstance, baseAnchor);
++    LEReferenceTo<AnchorTable> anchorTable(baseArray, success, anchorTableOffset);
++    LEPoint baseAnchor, markAdvance, pixels;
++
++
++    anchorTable->getAnchor(anchorTable, baseGlyph, fontInstance, baseAnchor, success);
+ 
+     fontInstance->getGlyphAdvance(markGlyph, pixels);
+     fontInstance->pixelsToUnits(pixels, markAdvance);
+@@ -109,6 +114,8 @@
+     float anchorDiffX = baseAnchor.fX - markAnchor.fX;
+     float anchorDiffY = baseAnchor.fY - markAnchor.fY;
+ 
++    _LETRACE("Offset: (%.2f, %.2f) glyph 0x%X", anchorDiffX, anchorDiffY, markGlyph);
++
+     glyphIterator->setCurrGlyphBaseOffset(baseIterator.getCurrStreamPosition());
+ 
+     if (glyphIterator->isRightToLeft()) {
+@@ -132,7 +139,6 @@
+             gi.next();
+         }
+         // end of JK patch
+-
+         fontInstance->pixelsToUnits(pixels, baseAdvance);
+ 
+         glyphIterator->setCurrGlyphPositionAdjustment(anchorDiffX - baseAdvance.fX, anchorDiffY - baseAdvance.fY, -markAdvance.fX, -markAdvance.fY);
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/MarkToLigaturePosnSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/MarkToLigaturePosnSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/MarkToLigaturePosnSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/MarkToLigaturePosnSubtables.cpp
+@@ -65,8 +65,11 @@
+     }
+ 
+     LEPoint markAnchor;
+-    const MarkArray *markArray = (const MarkArray *) ((char *) this + SWAPW(markArrayOffset));
+-    le_int32 markClass = markArray->getMarkClass(markGlyph, markCoverage, fontInstance, markAnchor);
++    LEReferenceTo<MarkArray> markArray(base, success,  SWAPW(markArrayOffset));
++    if( LE_FAILURE(success) ) {
++      return 0;
++    }
++    le_int32 markClass = markArray->getMarkClass(markArray, markGlyph, markCoverage, fontInstance, markAnchor, success);
+     le_uint16 mcCount = SWAPW(classCount);
+ 
+     if (markClass < 0 || markClass >= mcCount) {
+@@ -79,7 +82,7 @@
+     GlyphIterator ligatureIterator(*glyphIterator, (le_uint16) (lfIgnoreMarks /*| lfIgnoreBaseGlyphs*/));
+     LEGlyphID ligatureGlyph = findLigatureGlyph(&ligatureIterator);
+     le_int32 ligatureCoverage = getBaseCoverage(base, (LEGlyphID) ligatureGlyph, success);
+-    const LigatureArray *ligatureArray = (const LigatureArray *) ((char *) this + SWAPW(baseArrayOffset));
++    LEReferenceTo<LigatureArray> ligatureArray(base, success, SWAPW(baseArrayOffset));
+     le_uint16 ligatureCount = SWAPW(ligatureArray->ligatureCount);
+ 
+     if (ligatureCoverage < 0 || ligatureCoverage >= ligatureCount) {
+@@ -91,7 +94,7 @@
+ 
+     le_int32 markPosition = glyphIterator->getCurrStreamPosition();
+     Offset ligatureAttachOffset = SWAPW(ligatureArray->ligatureAttachTableOffsetArray[ligatureCoverage]);
+-    const LigatureAttachTable *ligatureAttachTable = (const LigatureAttachTable *) ((char *) ligatureArray + ligatureAttachOffset);
++    LEReferenceTo<LigatureAttachTable> ligatureAttachTable(ligatureArray, success, ligatureAttachOffset);
+     le_int32 componentCount = SWAPW(ligatureAttachTable->componentCount);
+     le_int32 component = ligatureIterator.getMarkComponent(markPosition);
+ 
+@@ -100,12 +103,14 @@
+         component = componentCount - 1;
+     }
+ 
+-    const ComponentRecord *componentRecord = &ligatureAttachTable->componentRecordArray[component * mcCount];
++    LEReferenceTo<ComponentRecord> componentRecord(base, success, &ligatureAttachTable->componentRecordArray[component * mcCount]);
++    LEReferenceToArrayOf<Offset> ligatureAnchorTableOffsetArray(base, success, &(componentRecord->ligatureAnchorTableOffsetArray[0]), markClass+1);
++    if( LE_FAILURE(success) ) { return 0; }
+     Offset anchorTableOffset = SWAPW(componentRecord->ligatureAnchorTableOffsetArray[markClass]);
+-    const AnchorTable *anchorTable = (const AnchorTable *) ((char *) ligatureAttachTable + anchorTableOffset);
++    LEReferenceTo<AnchorTable> anchorTable(ligatureAttachTable, success, anchorTableOffset);
+     LEPoint ligatureAnchor, markAdvance, pixels;
+ 
+-    anchorTable->getAnchor(ligatureGlyph, fontInstance, ligatureAnchor);
++    anchorTable->getAnchor(anchorTable, ligatureGlyph, fontInstance, ligatureAnchor, success);
+ 
+     fontInstance->getGlyphAdvance(markGlyph, pixels);
+     fontInstance->pixelsToUnits(pixels, markAdvance);
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/MarkToMarkPosnSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/MarkToMarkPosnSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/MarkToMarkPosnSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/MarkToMarkPosnSubtables.cpp
+@@ -66,8 +66,11 @@
+     }
+ 
+     LEPoint markAnchor;
+-    const MarkArray *markArray = (const MarkArray *) ((char *) this + SWAPW(markArrayOffset));
+-    le_int32 markClass = markArray->getMarkClass(markGlyph, markCoverage, fontInstance, markAnchor);
++    LEReferenceTo<MarkArray> markArray(base, success, SWAPW(markArrayOffset));
++    if(LE_FAILURE(success)) {
++      return 0;
++    }
++    le_int32 markClass = markArray->getMarkClass(markArray, markGlyph, markCoverage, fontInstance, markAnchor, success);
+     le_uint16 mcCount = SWAPW(classCount);
+ 
+     if (markClass < 0 || markClass >= mcCount) {
+@@ -79,7 +82,8 @@
+     GlyphIterator mark2Iterator(*glyphIterator);
+     LEGlyphID mark2Glyph = findMark2Glyph(&mark2Iterator);
+     le_int32 mark2Coverage = getBaseCoverage(base, (LEGlyphID) mark2Glyph, success);
+-    const Mark2Array *mark2Array = (const Mark2Array *) ((char *) this + SWAPW(baseArrayOffset));
++    LEReferenceTo<Mark2Array>  mark2Array(base, success, (const Mark2Array *) ((char *) this + SWAPW(baseArrayOffset)));
++    if(LE_FAILURE(success)) return 0;
+     le_uint16 mark2Count = SWAPW(mark2Array->mark2RecordCount);
+ 
+     if (mark2Coverage < 0 || mark2Coverage >= mark2Count) {
+@@ -89,9 +93,11 @@
+         return 0;
+     }
+ 
+-    const Mark2Record *mark2Record = &mark2Array->mark2RecordArray[mark2Coverage * mcCount];
++    LEReferenceTo<Mark2Record> mark2Record(base, success, &mark2Array->mark2RecordArray[mark2Coverage * mcCount]);
++    if(LE_FAILURE(success)) return 0;
+     Offset anchorTableOffset = SWAPW(mark2Record->mark2AnchorTableOffsetArray[markClass]);
+-    const AnchorTable *anchorTable = (const AnchorTable *) ((char *) mark2Array + anchorTableOffset);
++    LEReferenceTo<AnchorTable> anchorTable(mark2Array, success, anchorTableOffset);
++    if(LE_FAILURE(success)) return 0;
+     LEPoint mark2Anchor, markAdvance, pixels;
+ 
+     if (anchorTableOffset == 0) {
+@@ -99,7 +105,7 @@
+         return 0;
+     }
+ 
+-    anchorTable->getAnchor(mark2Glyph, fontInstance, mark2Anchor);
++    anchorTable->getAnchor(anchorTable, mark2Glyph, fontInstance, mark2Anchor, success);
+ 
+     fontInstance->getGlyphAdvance(markGlyph, pixels);
+     fontInstance->pixelsToUnits(pixels, markAdvance);
+@@ -107,6 +113,8 @@
+     float anchorDiffX = mark2Anchor.fX - markAnchor.fX;
+     float anchorDiffY = mark2Anchor.fY - markAnchor.fY;
+ 
++    _LETRACE("Offset: (%.2f, %.2f) glyph 0x%X mark2 0x%X", anchorDiffX, anchorDiffY, markGlyph, mark2Glyph);
++
+     glyphIterator->setCurrGlyphBaseOffset(mark2Iterator.getCurrStreamPosition());
+ 
+     if (glyphIterator->isRightToLeft()) {
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/MultipleSubstSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/MultipleSubstSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/MultipleSubstSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/MultipleSubstSubtables.cpp
+@@ -54,9 +54,10 @@
+     // FIXME: is this always the right thing to do?
+     // FIXME: should this only be done for a non-zero
+     //        glyphCount?
+-    if (filter != NULL && filter->accept(glyph)) {
++    if (filter != NULL && filter->accept(glyph, success)) {
+         return 0;
+     }
++    if(LE_FAILURE(success)) return 0;
+ 
+     le_int32 coverageIndex = getGlyphCoverage(base, glyph, success);
+     le_uint16 seqCount = SWAPW(sequenceCount);
+@@ -67,7 +68,7 @@
+ 
+     if (coverageIndex >= 0 && coverageIndex < seqCount) {
+         Offset sequenceTableOffset = SWAPW(sequenceTableOffsetArray[coverageIndex]);
+-        const SequenceTable *sequenceTable = (const SequenceTable *) ((char *) this + sequenceTableOffset);
++        LEReferenceTo<SequenceTable>   sequenceTable(base, success, sequenceTableOffset);
+         le_uint16 glyphCount = SWAPW(sequenceTable->glyphCount);
+ 
+         if (glyphCount == 0) {
+@@ -76,7 +77,7 @@
+         } else if (glyphCount == 1) {
+             TTGlyphID substitute = SWAPW(sequenceTable->substituteArray[0]);
+ 
+-            if (filter != NULL && ! filter->accept(LE_SET_GLYPH(glyph, substitute))) {
++            if (filter != NULL && ! filter->accept(LE_SET_GLYPH(glyph, substitute), success)) {
+                 return 0;
+             }
+ 
+@@ -89,7 +90,7 @@
+                 for (le_int32 i = 0; i < glyphCount; i += 1) {
+                     TTGlyphID substitute = SWAPW(sequenceTable->substituteArray[i]);
+ 
+-                    if (! filter->accept(substitute)) {
++                    if (! filter->accept(substitute, success)) {
+                         return 0;
+                     }
+                 }
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/OpenTypeLayoutEngine.cpp openjdk/jdk/src/share/native/sun/font/layout/OpenTypeLayoutEngine.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/OpenTypeLayoutEngine.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/OpenTypeLayoutEngine.cpp
+@@ -369,6 +369,7 @@
+ void OpenTypeLayoutEngine::adjustGlyphPositions(const LEUnicode chars[], le_int32 offset, le_int32 count, le_bool reverse,
+                                                 LEGlyphStorage &glyphStorage, LEErrorCode &success)
+ {
++    _LETRACE("OTLE::adjustGPOS");
+     if (LE_FAILURE(success)) {
+         return;
+     }
+@@ -409,14 +410,17 @@
+         if (!fGPOSTable.isEmpty()) {
+             if (fScriptTagV2 != nullScriptTag &&
+                 fGPOSTable->coversScriptAndLanguage(fGPOSTable, fScriptTagV2,fLangSysTag,success)) {
++              _LETRACE("OTLE::process [0]");
+               fGPOSTable->process(fGPOSTable, glyphStorage, adjustments, reverse, fScriptTagV2, fLangSysTag,
+                                   fGDEFTable, success, fFontInstance, fFeatureMap, fFeatureMapCount, fFeatureOrder);
+ 
+             } else {
++              _LETRACE("OTLE::process [1]");
+               fGPOSTable->process(fGPOSTable, glyphStorage, adjustments, reverse, fScriptTag, fLangSysTag,
+                                   fGDEFTable, success, fFontInstance, fFeatureMap, fFeatureMapCount, fFeatureOrder);
+             }
+         } else if (fTypoFlags & LE_Kerning_FEATURE_FLAG) { /* kerning enabled */
++          _LETRACE("OTLE::kerning");
+           LETableReference kernTable(fFontInstance, LE_KERN_TABLE_TAG, success);
+           KernTable kt(kernTable, success);
+           kt.process(glyphStorage, success);
+@@ -445,6 +449,7 @@
+ 
+             xPlacement = fFontInstance->xUnitsToPoints(xPlacement);
+             yPlacement = fFontInstance->yUnitsToPoints(yPlacement);
++            _LETRACE("OTLE GPOS: #%d, (%.2f,%.2f)", i, xPlacement, yPlacement);
+             glyphStorage.adjustPosition(i, xAdjust + xPlacement, -(yAdjust + yPlacement), success);
+ 
+             xAdjust += fFontInstance->xUnitsToPoints(xAdvance);
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/OpenTypeUtilities.h openjdk/jdk/src/share/native/sun/font/layout/OpenTypeUtilities.h
+--- openjdk/jdk/src/share/native/sun/font/layout/OpenTypeUtilities.h
++++ openjdk/jdk/src/share/native/sun/font/layout/OpenTypeUtilities.h
+@@ -46,15 +46,14 @@
+ public:
+     static le_int8 highBit(le_int32 value);
+     static Offset getTagOffset(LETag tag, const LEReferenceToArrayOf<TagAndOffsetRecord> &records, LEErrorCode &success);
+-    /**
+-     * @deprecated TODO remove
+-     */
++#if LE_ENABLE_RAW
+     static le_int32 getGlyphRangeIndex(TTGlyphID glyphID, const GlyphRangeRecord *records, le_int32 recordCount) {
+       LEErrorCode success = LE_NO_ERROR;
+       LETableReference recordRef0((const le_uint8*)records);
+       LEReferenceToArrayOf<GlyphRangeRecord> recordRef(recordRef0, success, (size_t)0, recordCount);
+       return getGlyphRangeIndex(glyphID, recordRef, success);
+     }
++#endif
+     static le_int32 getGlyphRangeIndex(TTGlyphID glyphID, const LEReferenceToArrayOf<GlyphRangeRecord> &records, LEErrorCode &success);
+     static le_int32 search(le_uint16 value, const le_uint16 array[], le_int32 count);
+     static le_int32 search(le_uint32 value, const le_uint32 array[], le_int32 count);
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/PairPositioningSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/PairPositioningSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/PairPositioningSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/PairPositioningSubtables.cpp
+@@ -76,19 +76,17 @@
+ {
+     LEGlyphID firstGlyph = glyphIterator->getCurrGlyphID();
+     le_int32 coverageIndex = getGlyphCoverage(base, firstGlyph, success);
+-
+-    if (LE_FAILURE(success)) {
+-      return 0;
+-    }
+     GlyphIterator tempIterator(*glyphIterator);
+ 
+-    if (coverageIndex >= 0 && glyphIterator->next()) {
++    LEReferenceToArrayOf<Offset> pairSetTableOffsetArrayRef(base, success, pairSetTableOffsetArray, SWAPW(pairSetCount));
++
++    if (LE_SUCCESS(success) && coverageIndex >= 0 && glyphIterator->next() && (le_uint32)coverageIndex < pairSetTableOffsetArrayRef.getCount()) {
+         Offset pairSetTableOffset = SWAPW(pairSetTableOffsetArray[coverageIndex]);
+-        LEReferenceTo<PairSetTable> pairSetTable(base, success, ((char *) this + pairSetTableOffset));
+-        if (LE_FAILURE(success)) {
+-          return 0;
+-        }
++        LEReferenceTo<PairSetTable> pairSetTable(base, success, pairSetTableOffset);
++        if( LE_FAILURE(success) ) return 0;
+         le_uint16 pairValueCount = SWAPW(pairSetTable->pairValueCount);
++        LEReferenceTo<PairValueRecord> pairValueRecordArray(pairSetTable, success, pairSetTable->pairValueRecordArray);
++        if( LE_FAILURE(success) ) return 0;
+         le_int16 valueRecord1Size = ValueRecord::getSize(SWAPW(valueFormat1));
+         le_int16 valueRecord2Size = ValueRecord::getSize(SWAPW(valueFormat2));
+         le_int16 recordSize = sizeof(PairValueRecord) - sizeof(ValueRecord) + valueRecord1Size + valueRecord2Size;
+@@ -96,21 +94,22 @@
+         LEReferenceTo<PairValueRecord> pairValueRecord;
+ 
+         if (pairValueCount != 0) {
+-            pairValueRecord = findPairValueRecord(base, (TTGlyphID) LE_GET_GLYPH(secondGlyph), pairSetTable->pairValueRecordArray, pairValueCount, recordSize, success);
++          pairValueRecord = findPairValueRecord((TTGlyphID) LE_GET_GLYPH(secondGlyph), pairValueRecordArray, pairValueCount, recordSize, success);
+         }
+ 
+-        if (pairValueRecord.isEmpty()) {
++        if (pairValueRecord.isEmpty() || LE_FAILURE(success)) {
+             return 0;
+         }
+ 
+         if (valueFormat1 != 0) {
+-            pairValueRecord->valueRecord1.adjustPosition(SWAPW(valueFormat1), (char *) this, tempIterator, fontInstance);
++          pairValueRecord->valueRecord1.adjustPosition(SWAPW(valueFormat1), base, tempIterator, fontInstance, success);
+         }
+ 
+         if (valueFormat2 != 0) {
+-            const ValueRecord *valueRecord2 = (const ValueRecord *) ((char *) &pairValueRecord->valueRecord1 + valueRecord1Size);
+-
+-            valueRecord2->adjustPosition(SWAPW(valueFormat2), (char *) this, *glyphIterator, fontInstance);
++          LEReferenceTo<ValueRecord> valueRecord2(base, success, ((char *) &pairValueRecord->valueRecord1 + valueRecord1Size));
++          if(LE_SUCCESS(success)) {
++            valueRecord2->adjustPosition(SWAPW(valueFormat2), base, *glyphIterator, fontInstance, success);
++          }
+         }
+ 
+         // back up glyphIterator so second glyph can be
+@@ -135,26 +134,28 @@
+ 
+     if (coverageIndex >= 0 && glyphIterator->next()) {
+         LEGlyphID secondGlyph = glyphIterator->getCurrGlyphID();
+-        const ClassDefinitionTable *classDef1 = (const ClassDefinitionTable *) ((char *) this + SWAPW(classDef1Offset));
+-        const ClassDefinitionTable *classDef2 = (const ClassDefinitionTable *) ((char *) this + SWAPW(classDef2Offset));
+-        le_int32 class1 = classDef1->getGlyphClass(firstGlyph);
+-        le_int32 class2 = classDef2->getGlyphClass(secondGlyph);
++        const LEReferenceTo<ClassDefinitionTable> classDef1(base, success, SWAPW(classDef1Offset));
++        const LEReferenceTo<ClassDefinitionTable> classDef2(base, success, SWAPW(classDef2Offset));
++        le_int32 class1 = classDef1->getGlyphClass(classDef1, firstGlyph, success);
++        le_int32 class2 = classDef2->getGlyphClass(classDef2, secondGlyph, success);
+         le_int16 valueRecord1Size = ValueRecord::getSize(SWAPW(valueFormat1));
+         le_int16 valueRecord2Size = ValueRecord::getSize(SWAPW(valueFormat2));
+         le_int16 class2RecordSize = valueRecord1Size + valueRecord2Size;
+         le_int16 class1RecordSize = class2RecordSize * SWAPW(class2Count);
+-        const Class1Record *class1Record = (const Class1Record *) ((char *) class1RecordArray + (class1RecordSize * class1));
+-        const Class2Record *class2Record = (const Class2Record *) ((char *) class1Record->class2RecordArray + (class2RecordSize * class2));
++        const LEReferenceTo<Class1Record> class1Record(base, success, (const Class1Record *) ((char *) class1RecordArray + (class1RecordSize * class1)));
++        const LEReferenceTo<Class2Record> class2Record(base, success, (const Class2Record *) ((char *) class1Record->class2RecordArray + (class2RecordSize * class2)));
+ 
+-
++        if( LE_SUCCESS(success) ) {
+         if (valueFormat1 != 0) {
+-            class2Record->valueRecord1.adjustPosition(SWAPW(valueFormat1), (char *) this, tempIterator, fontInstance);
++            class2Record->valueRecord1.adjustPosition(SWAPW(valueFormat1), base, tempIterator, fontInstance, success);
+         }
+-
+         if (valueFormat2 != 0) {
+-            const ValueRecord *valueRecord2 = (const ValueRecord *) ((char *) &class2Record->valueRecord1 + valueRecord1Size);
+-
+-            valueRecord2->adjustPosition(SWAPW(valueFormat2), (const char *) this, *glyphIterator, fontInstance);
++            const LEReferenceTo<ValueRecord> valueRecord2(base, success, ((char *) &class2Record->valueRecord1) + valueRecord1Size);
++            LEReferenceTo<PairPositioningFormat2Subtable> thisRef(base, success, this);
++            if(LE_SUCCESS(success)) {
++              valueRecord2->adjustPosition(SWAPW(valueFormat2), thisRef, *glyphIterator, fontInstance, success);
++            }
++          }
+         }
+ 
+         // back up glyphIterator so second glyph can be
+@@ -166,23 +167,24 @@
+     return 0;
+ }
+ 
+-LEReferenceTo<PairValueRecord> PairPositioningFormat1Subtable::findPairValueRecord(const LETableReference &base, TTGlyphID glyphID, const PairValueRecord *records, le_uint16 recordCount, le_uint16 recordSize, LEErrorCode &success) const
++LEReferenceTo<PairValueRecord>
++PairPositioningFormat1Subtable::findPairValueRecord(TTGlyphID glyphID, LEReferenceTo<PairValueRecord>& records,
++                                                    le_uint16 recordCount,
++                                                    le_uint16 recordSize, LEErrorCode &success) const
+ {
+ #if 1
+         // The OpenType spec. says that the ValueRecord table is
+         // sorted by secondGlyph. Unfortunately, there are fonts
+         // around that have an unsorted ValueRecord table.
+-        LEReferenceTo<PairValueRecord> record(base, success, records);
+-        record.verifyLength(0, recordSize, success);
++        LEReferenceTo<PairValueRecord> record(records);
+ 
+         for(le_int32 r = 0; r < recordCount; r += 1) {
+-           if (LE_FAILURE(success)) return (const PairValueRecord*)NULL;
++          if(LE_FAILURE(success)) return LEReferenceTo<PairValueRecord>();
+                 if (SWAPW(record->secondGlyph) == glyphID) {
+                         return record;
+                 }
+ 
+-                record =  LEReferenceTo<PairValueRecord>(base, success, ((const char*)record.getAlias())+ recordSize);
+-                record.verifyLength(0, recordSize, success);
++          record.addOffset(recordSize, success);
+         }
+ #else
+   #error dead code - not updated.
+@@ -211,7 +213,7 @@
+     }
+ #endif
+ 
+-    return (const PairValueRecord*)NULL;
++    return LEReferenceTo<PairValueRecord>();
+ }
+ 
+ U_NAMESPACE_END
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/PairPositioningSubtables.h openjdk/jdk/src/share/native/sun/font/layout/PairPositioningSubtables.h
+--- openjdk/jdk/src/share/native/sun/font/layout/PairPositioningSubtables.h
++++ openjdk/jdk/src/share/native/sun/font/layout/PairPositioningSubtables.h
+@@ -77,9 +77,8 @@
+     le_uint32  process(const LEReferenceTo<PairPositioningFormat1Subtable> &base, GlyphIterator *glyphIterator, const LEFontInstance *fontInstance, LEErrorCode &success) const;
+ 
+ private:
+-    LEReferenceTo<PairValueRecord> findPairValueRecord(const LETableReference &base, TTGlyphID glyphID, const PairValueRecord *records,
++    LEReferenceTo<PairValueRecord> findPairValueRecord(TTGlyphID glyphID, LEReferenceTo<PairValueRecord> &records,
+         le_uint16 recordCount, le_uint16 recordSize, LEErrorCode &success) const;
+-
+ };
+ LE_VAR_ARRAY(PairPositioningFormat1Subtable, pairSetTableOffsetArray)
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguage.cpp openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguage.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguage.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguage.cpp
+@@ -106,7 +106,8 @@
+         }
+     } else {
+       LEReferenceToArrayOf<ScriptRecord> scriptRecordArrayRef(base, success, &scriptRecordArray[0], count);
+-      scriptTableOffset = OpenTypeUtilities::getTagOffset(scriptTag, scriptRecordArrayRef, success); // TODO
++
++      scriptTableOffset = OpenTypeUtilities::getTagOffset(scriptTag, scriptRecordArrayRef, success);
+     }
+ 
+     if (scriptTableOffset != 0) {
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguageTags.cpp openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguageTags.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguageTags.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguageTags.cpp
+@@ -126,13 +126,13 @@
+     linaScriptTag, /* 'lina' (LINA) */
+     mandScriptTag, /* 'mand' (MANDAIC) */
+     mayaScriptTag, /* 'maya' (MAYA) */
+-    meroScriptTag, /* 'mero' (MERO) */
++    meroScriptTag, /* 'mero' (MEROITIC_HIEROGLYPHS) */
+     nkooScriptTag, /* 'nko ' (NKO) */
+     orkhScriptTag, /* 'orkh' (OLD_TURKIC) */
+     permScriptTag, /* 'perm' (PERM) */
+     phagScriptTag, /* 'phag' (PHAGS_PA) */
+     phnxScriptTag, /* 'phnx' (PHOENICIAN) */
+-    plrdScriptTag, /* 'plrd' (PLRD) */
++    plrdScriptTag, /* 'plrd' (MIAO/POLLARD) */
+     roroScriptTag, /* 'roro' (RORO) */
+     saraScriptTag, /* 'sara' (SARA) */
+     syreScriptTag, /* 'syre' (SYRE) */
+@@ -158,7 +158,7 @@
+     mteiScriptTag, /* 'mtei' (MEETEI_MAYEK) */
+     armiScriptTag, /* 'armi' (IMPERIAL_ARAMAIC) */
+     avstScriptTag, /* 'avst' (AVESTAN) */
+-    cakmScriptTag, /* 'cakm' (CAKM) */
++    cakmScriptTag, /* 'cakm' (CHAKMA) */
+     koreScriptTag, /* 'kore' (KORE) */
+     kthiScriptTag, /* 'kthi' (KAITHI) */
+     maniScriptTag, /* 'mani' (MANI) */
+@@ -181,7 +181,7 @@
+     kpelScriptTag, /* 'kpel' (KPEL) */
+     lomaScriptTag, /* 'loma' (LOMA) */
+     mendScriptTag, /* 'mend' (MEND) */
+-    mercScriptTag, /* 'merc' (MERC) */
++    mercScriptTag, /* 'merc' (MEROITIC_CURSIVE) */
+     narbScriptTag, /* 'narb' (NARB) */
+     nbatScriptTag, /* 'nbat' (NBAT) */
+     palmScriptTag, /* 'palm' (PALM) */
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguageTags.h openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguageTags.h
+--- openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguageTags.h
++++ openjdk/jdk/src/share/native/sun/font/layout/ScriptAndLanguageTags.h
+@@ -140,13 +140,13 @@
+ const LETag linaScriptTag = 0x6C696E61; /* 'lina' (LINA) */
+ const LETag mandScriptTag = 0x6D616E64; /* 'mand' (MANDAIC) */
+ const LETag mayaScriptTag = 0x6D617961; /* 'maya' (MAYA) */
+-const LETag meroScriptTag = 0x6D65726F; /* 'mero' (MERO) */
++const LETag meroScriptTag = 0x6D65726F; /* 'mero' (MEROITIC_HIEROGLYPHS) */
+ const LETag nkooScriptTag = 0x6E6B6F20; /* 'nko ' (NKO) */
+ const LETag orkhScriptTag = 0x6F726B68; /* 'orkh' (OLD_TURKIC) */
+ const LETag permScriptTag = 0x7065726D; /* 'perm' (PERM) */
+ const LETag phagScriptTag = 0x70686167; /* 'phag' (PHAGS_PA) */
+ const LETag phnxScriptTag = 0x70686E78; /* 'phnx' (PHOENICIAN) */
+-const LETag plrdScriptTag = 0x706C7264; /* 'plrd' (PLRD) */
++const LETag plrdScriptTag = 0x706C7264; /* 'plrd' (MIAO) */
+ const LETag roroScriptTag = 0x726F726F; /* 'roro' (RORO) */
+ const LETag saraScriptTag = 0x73617261; /* 'sara' (SARA) */
+ const LETag syreScriptTag = 0x73797265; /* 'syre' (SYRE) */
+@@ -172,7 +172,7 @@
+ const LETag mteiScriptTag = 0x6D746569; /* 'mtei' (MEETEI_MAYEK) */
+ const LETag armiScriptTag = 0x61726D69; /* 'armi' (IMPERIAL_ARAMAIC) */
+ const LETag avstScriptTag = 0x61767374; /* 'avst' (AVESTAN) */
+-const LETag cakmScriptTag = 0x63616B6D; /* 'cakm' (CAKM) */
++const LETag cakmScriptTag = 0x63616B6D; /* 'cakm' (CHAKMA) */
+ const LETag koreScriptTag = 0x6B6F7265; /* 'kore' (KORE) */
+ const LETag kthiScriptTag = 0x6B746869; /* 'kthi' (KAITHI) */
+ const LETag maniScriptTag = 0x6D616E69; /* 'mani' (MANI) */
+@@ -195,7 +195,7 @@
+ const LETag kpelScriptTag = 0x6B70656C; /* 'kpel' (KPEL) */
+ const LETag lomaScriptTag = 0x6C6F6D61; /* 'loma' (LOMA) */
+ const LETag mendScriptTag = 0x6D656E64; /* 'mend' (MEND) */
+-const LETag mercScriptTag = 0x6D657263; /* 'merc' (MERC) */
++const LETag mercScriptTag = 0x6D657263; /* 'merc' (MEROITIC_CURSIVE) */
+ const LETag narbScriptTag = 0x6E617262; /* 'narb' (NARB) */
+ const LETag nbatScriptTag = 0x6E626174; /* 'nbat' (NBAT) */
+ const LETag palmScriptTag = 0x70616C6D; /* 'palm' (PALM) */
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/SinglePositioningSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/SinglePositioningSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/SinglePositioningSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/SinglePositioningSubtables.cpp
+@@ -75,7 +75,7 @@
+     }
+ 
+     if (coverageIndex >= 0) {
+-        valueRecord.adjustPosition(SWAPW(valueFormat), (const char *) this, *glyphIterator, fontInstance);
++      valueRecord.adjustPosition(SWAPW(valueFormat), base, *glyphIterator, fontInstance, success);
+ 
+         return 1;
+     }
+@@ -92,7 +92,7 @@
+     }
+ 
+     if (coverageIndex >= 0) {
+-        valueRecordArray[0].adjustPosition(coverageIndex, SWAPW(valueFormat), (const char *) this, *glyphIterator, fontInstance);
++      valueRecordArray[0].adjustPosition(coverageIndex, SWAPW(valueFormat), base, *glyphIterator, fontInstance, success);
+ 
+         return 1;
+     }
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/SingleSubstitutionSubtables.cpp openjdk/jdk/src/share/native/sun/font/layout/SingleSubstitutionSubtables.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/SingleSubstitutionSubtables.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/SingleSubstitutionSubtables.cpp
+@@ -76,7 +76,7 @@
+     if (coverageIndex >= 0) {
+         TTGlyphID substitute = ((TTGlyphID) LE_GET_GLYPH(glyph)) + SWAPW(deltaGlyphID);
+ 
+-        if (filter == NULL || filter->accept(LE_SET_GLYPH(glyph, substitute))) {
++        if (filter == NULL || filter->accept(LE_SET_GLYPH(glyph, substitute), success)) {
+             glyphIterator->setCurrGlyphID(substitute);
+         }
+ 
+@@ -97,7 +97,7 @@
+     if (coverageIndex >= 0) {
+         TTGlyphID substitute = SWAPW(substituteArray[coverageIndex]);
+ 
+-        if (filter == NULL || filter->accept(LE_SET_GLYPH(glyph, substitute))) {
++        if (filter == NULL || filter->accept(LE_SET_GLYPH(glyph, substitute), success)) {
+             glyphIterator->setCurrGlyphID(substitute);
+         }
+ 
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/TibetanReordering.h openjdk/jdk/src/share/native/sun/font/layout/TibetanReordering.h
+--- openjdk/jdk/src/share/native/sun/font/layout/TibetanReordering.h
++++ openjdk/jdk/src/share/native/sun/font/layout/TibetanReordering.h
+@@ -39,7 +39,7 @@
+  */
+ 
+ #ifndef __TIBETANREORDERING_H
+-#define __TIBETANORDERING_H
++#define __TIBETANREORDERING_H
+ 
+ /**
+  * \file
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ValueRecords.cpp openjdk/jdk/src/share/native/sun/font/layout/ValueRecords.cpp
+--- openjdk/jdk/src/share/native/sun/font/layout/ValueRecords.cpp
++++ openjdk/jdk/src/share/native/sun/font/layout/ValueRecords.cpp
+@@ -59,8 +59,8 @@
+     return SWAPW(value);
+ }
+ 
+-void ValueRecord::adjustPosition(ValueFormat valueFormat, const char *base, GlyphIterator &glyphIterator,
+-                                 const LEFontInstance *fontInstance) const
++void ValueRecord::adjustPosition(ValueFormat valueFormat, const LETableReference& base, GlyphIterator &glyphIterator,
++                                 const LEFontInstance *fontInstance, LEErrorCode &success) const
+ {
+     float xPlacementAdjustment = 0;
+     float yPlacementAdjustment = 0;
+@@ -118,8 +118,8 @@
+             Offset dtOffset = getFieldValue(valueFormat, vrfXPlaDevice);
+ 
+             if (dtOffset != 0) {
+-                const DeviceTable *dt = (const DeviceTable *) (base + dtOffset);
+-                le_int16 xAdj = dt->getAdjustment(xppem);
++                 LEReferenceTo<DeviceTable> dt(base, success, dtOffset);
++                le_int16 xAdj = dt->getAdjustment(dt, xppem, success);
+ 
+                 xPlacementAdjustment += fontInstance->xPixelsToUnits(xAdj);
+             }
+@@ -129,8 +129,8 @@
+             Offset dtOffset = getFieldValue(valueFormat, vrfYPlaDevice);
+ 
+             if (dtOffset != 0) {
+-                const DeviceTable *dt = (const DeviceTable *) (base + dtOffset);
+-                le_int16 yAdj = dt->getAdjustment(yppem);
++                 LEReferenceTo<DeviceTable> dt(base, success, dtOffset);
++                le_int16 yAdj = dt->getAdjustment(dt, yppem, success);
+ 
+                 yPlacementAdjustment += fontInstance->yPixelsToUnits(yAdj);
+             }
+@@ -140,8 +140,8 @@
+             Offset dtOffset = getFieldValue(valueFormat, vrfXAdvDevice);
+ 
+             if (dtOffset != 0) {
+-                const DeviceTable *dt = (const DeviceTable *) (base + dtOffset);
+-                le_int16 xAdj = dt->getAdjustment(xppem);
++                 LEReferenceTo<DeviceTable> dt(base, success, dtOffset);
++                le_int16 xAdj = dt->getAdjustment(dt, xppem, success);
+ 
+                 xAdvanceAdjustment += fontInstance->xPixelsToUnits(xAdj);
+             }
+@@ -151,8 +151,8 @@
+             Offset dtOffset = getFieldValue(valueFormat, vrfYAdvDevice);
+ 
+             if (dtOffset != 0) {
+-                const DeviceTable *dt = (const DeviceTable *) (base + dtOffset);
+-                le_int16 yAdj = dt->getAdjustment(yppem);
++              LEReferenceTo<DeviceTable> dt(base, success, dtOffset);
++              le_int16 yAdj = dt->getAdjustment(dt, yppem, success);
+ 
+                 yAdvanceAdjustment += fontInstance->yPixelsToUnits(yAdj);
+             }
+@@ -163,8 +163,8 @@
+         xPlacementAdjustment, yPlacementAdjustment, xAdvanceAdjustment, yAdvanceAdjustment);
+ }
+ 
+-void ValueRecord::adjustPosition(le_int16 index, ValueFormat valueFormat, const char *base, GlyphIterator &glyphIterator,
+-                                 const LEFontInstance *fontInstance) const
++void ValueRecord::adjustPosition(le_int16 index, ValueFormat valueFormat, const LETableReference& base, GlyphIterator &glyphIterator,
++                                 const LEFontInstance *fontInstance, LEErrorCode &success) const
+ {
+     float xPlacementAdjustment = 0;
+     float yPlacementAdjustment = 0;
+@@ -222,8 +222,8 @@
+             Offset dtOffset = getFieldValue(index, valueFormat, vrfXPlaDevice);
+ 
+             if (dtOffset != 0) {
+-                const DeviceTable *dt = (const DeviceTable *) (base + dtOffset);
+-                le_int16 xAdj = dt->getAdjustment(xppem);
++                LEReferenceTo<DeviceTable> dt(base, success, dtOffset);
++                le_int16 xAdj = dt->getAdjustment(dt, xppem, success);
+ 
+                 xPlacementAdjustment += fontInstance->xPixelsToUnits(xAdj);
+             }
+@@ -233,8 +233,8 @@
+             Offset dtOffset = getFieldValue(index, valueFormat, vrfYPlaDevice);
+ 
+             if (dtOffset != 0) {
+-                const DeviceTable *dt = (const DeviceTable *) (base + dtOffset);
+-                le_int16 yAdj = dt->getAdjustment(yppem);
++                LEReferenceTo<DeviceTable> dt(base, success, dtOffset);
++                le_int16 yAdj = dt->getAdjustment(dt, yppem, success);
+ 
+                 yPlacementAdjustment += fontInstance->yPixelsToUnits(yAdj);
+             }
+@@ -244,8 +244,8 @@
+             Offset dtOffset = getFieldValue(index, valueFormat, vrfXAdvDevice);
+ 
+             if (dtOffset != 0) {
+-                const DeviceTable *dt = (const DeviceTable *) (base + dtOffset);
+-                le_int16 xAdj = dt->getAdjustment(xppem);
++                LEReferenceTo<DeviceTable> dt(base, success, dtOffset);
++                le_int16 xAdj = dt->getAdjustment(dt, xppem, success);
+ 
+                 xAdvanceAdjustment += fontInstance->xPixelsToUnits(xAdj);
+             }
+@@ -255,8 +255,8 @@
+             Offset dtOffset = getFieldValue(index, valueFormat, vrfYAdvDevice);
+ 
+             if (dtOffset != 0) {
+-                const DeviceTable *dt = (const DeviceTable *) (base + dtOffset);
+-                le_int16 yAdj = dt->getAdjustment(yppem);
++                LEReferenceTo<DeviceTable> dt(base, success, dtOffset);
++                le_int16 yAdj = dt->getAdjustment(dt, yppem, success);
+ 
+                 yAdvanceAdjustment += fontInstance->yPixelsToUnits(yAdj);
+             }
+diff -Nru openjdk/jdk/src/share/native/sun/font/layout/ValueRecords.h openjdk/jdk/src/share/native/sun/font/layout/ValueRecords.h
+--- openjdk/jdk/src/share/native/sun/font/layout/ValueRecords.h
++++ openjdk/jdk/src/share/native/sun/font/layout/ValueRecords.h
+@@ -53,10 +53,10 @@
+ 
+     le_int16   getFieldValue(ValueFormat valueFormat, ValueRecordField field) const;
+     le_int16   getFieldValue(le_int16 index, ValueFormat valueFormat, ValueRecordField field) const;
+-    void    adjustPosition(ValueFormat valueFormat, const char *base, GlyphIterator &glyphIterator,
+-                const LEFontInstance *fontInstance) const;
+-    void    adjustPosition(le_int16 index, ValueFormat valueFormat, const char *base, GlyphIterator &glyphIterator,
+-                const LEFontInstance *fontInstance) const;
++    void    adjustPosition(ValueFormat valueFormat, const LETableReference &base, GlyphIterator &glyphIterator,
++                const LEFontInstance *fontInstance, LEErrorCode &success) const;
++    void    adjustPosition(le_int16 index, ValueFormat valueFormat, const LETableReference &base, GlyphIterator &glyphIterator,
++                const LEFontInstance *fontInstance, LEErrorCode &success) const;
+ 
+     static le_int16    getSize(ValueFormat valueFormat);
+ 
