@@ -898,7 +898,7 @@ ICEDTEA_PATCHES += patches/sdt-jni.patch \
 	patches/sdt-dtrace-hpp.patch \
 	patches/sdt-make.patch \
 	patches/sdt-arguments.patch \
-	patches/systemtap_gc.patch
+	patches/systemtap_gc.patch \
 	patches/systemtap-gcc-4.5.patch \
 	patches/systemtap-alloc-size-workaround.patch
 endif
