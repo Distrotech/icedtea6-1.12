@@ -863,7 +863,8 @@ ICEDTEA_PATCHES = \
 	patches/disable-cc-incompatible-sanity-checks.patch \
 	patches/rh995488-rhel_tz_fix.patch \
 	patches/openjdk/8025255-tzdata2013g.patch \
-	patches/d729448-32_bit_alignment.patch
+	patches/d729448-32_bit_alignment.patch \
+	patches/openjdk/8027837-corba_build_dependency.patch
 
 if WITH_RHINO
 ICEDTEA_PATCHES += \

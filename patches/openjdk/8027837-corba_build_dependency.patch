@@ -1,0 +1,21 @@
+# HG changeset patch
+# User coffeys
+# Date 1384185131 0
+#      Mon Nov 11 15:52:11 2013 +0000
+# Node ID c93c49524d58fd6f38b07db2a54fc644c1327a5f
+# Parent  295b9963b97f12c43209dbe212b475e835f0a7d0
+8027837: JDK-8021257 causes CORBA build failure on emdedded platforms
+Reviewed-by: dholmes
+
+diff -r 295b9963b97f -r c93c49524d58 make/Makefile
+--- openjdk/corba/make/Makefile	Fri Jan 17 23:21:27 2014 +0000
++++ openjdk/corba/make/Makefile	Mon Nov 11 15:52:11 2013 +0000
+@@ -158,7 +158,7 @@
+ #
+ # CORBA
+ #
+-SUBDIRS = tools javax org sun com
++SUBDIRS = tools sun/rmi javax org sun com
+ 
+ build:
+ 	$(SUBDIRS-loop)

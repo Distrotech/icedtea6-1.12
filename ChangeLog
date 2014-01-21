@@ -1,3 +1,11 @@
+2014-01-20  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* Makefile.am:
+	(ICEDTEA_PATCHES): Add new patch.
+	* patches/openjdk/8027837-corba_build_dependency.patch:
+	Generate sources before building code that depends
+	on them.
+
 2013-09-19  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* configure.ac:
