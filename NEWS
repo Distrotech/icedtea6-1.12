@@ -47,6 +47,12 @@ New in release 1.12.8 (2014-XX-XX):
 * Backports
   - S6995424: Eliminate dependency to a deprecated API com.sun.security.auth.PolicyFile
   - S8026826: JDK 7 fix for 8010935 broke the build
+  - S8027837: JDK-8021257 causes CORBA build failure on emdedded platforms
+* Bug fixes
+  - Fail if a C and C++ compiler are not detected.
+  - Fix path in nss-not-enabled-config.patch.
+* SystemTap support:
+  - Ensure all patches are applied.
 
 New in release 1.12.7 (2013-11-21):
 
@@ -137,6 +143,7 @@ New in release 1.12.7 (2013-11-21):
   - S6867671: javap whitespace formatting issues
   - S6868539: javap should use current names for constant pool tags
   - S6888215: memory leak in jpeg plugin
+  - S6893617: JDK 6 CNCtx always uses the default ORB
   - S6902264: fix indentation of tableswitch and lookupswitch
   - S6925851: Localize JRE into pt_BR
   - S6954275: XML signatures with reference data larger 16KB and cacheRef on fails to validate

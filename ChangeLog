@@ -1,6 +1,10 @@
+2014-01-21  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* NEWS: Updated.
+
 2014-01-10  Omair Majid  <omajid@redhat.com>
 
-	*  patches/nss-not-enabled-config.patch: Fix path
+	* patches/nss-not-enabled-config.patch: Fix path
 	to java.security.
 
 2014-01-20  Andrew John Hughes  <gnu.andrew@redhat.com>
