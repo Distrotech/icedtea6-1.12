@@ -1,3 +1,8 @@
+2014-01-10  Omair Majid  <omajid@redhat.com>
+
+	*  patches/nss-not-enabled-config.patch: Fix path
+	to java.security.
+
 2014-01-20  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* Makefile.am:
@@ -15640,7 +15645,7 @@
 	versions of NSS.
 	* patches/icedtea-nss-config.patch: Patch java.security
 	with the PCKS11 provider configuration.
-	
+
 2009-09-25  Gary Benson  <gbenson@redhat.com>
 
 	* ports/hotspot/src/cpu/zero/vm/assembler_zero.hpp: Moved ffi.h to...
