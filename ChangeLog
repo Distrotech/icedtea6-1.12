@@ -1,3 +1,8 @@
+2014-01-23  Andrew John Hughes  <gnu.andrew@redhat.com>
+
+	* configure.ac: Set to 1.12.9pre.
+	* NEWS: Add 1.12.9 section.
+
 2014-01-22  Andrew John Hughes  <gnu.andrew@redhat.com>
 
 	* configure.ac: Set to 1.12.8.
